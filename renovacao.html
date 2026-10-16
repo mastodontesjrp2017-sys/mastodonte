@@ -48,6 +48,19 @@ button:disabled{opacity:.55}
 .pg:first-child{border-top:0}
 .btn2{display:block;text-align:center;margin-top:12px;padding:13px;border-radius:12px;background:var(--bg);border:1px solid var(--line);color:var(--ink);font-weight:700;text-decoration:none}
 @media (prefers-color-scheme:dark){.warn .dot{background:#3a3013;color:#e2b53c}}
+.tabs{position:sticky;top:0;z-index:5;display:flex;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:4px;margin-bottom:14px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.tabs button{flex:1;width:auto;margin:0;padding:10px 4px;border-radius:10px;background:none;color:var(--ink2);font-size:14px;font-weight:700}
+.tabs button.on{background:var(--brand);color:var(--brand-ink)}
+.kp{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kp .card{padding:14px}.kp small{display:block;color:var(--ink3);font-size:13px;font-weight:700}.kp b{display:block;font-family:var(--slab);font-size:21px;margin-top:2px}
+.bar{margin-top:10px}.bar .l{display:flex;justify-content:space-between;font-size:14.5px;margin-bottom:4px;gap:8px}
+.bar .t{height:9px;background:var(--bg);border-radius:99px;overflow:hidden}.bar .f{height:100%;border-radius:99px;background:var(--bad)}
+.mes{display:grid;grid-template-columns:1fr auto auto;gap:4px 14px;font-size:14.5px}.mes span{text-align:right}
+.sd{padding:11px 0;border-top:1px solid var(--line)}.sd:first-child{border-top:0}
+.sd .r{display:flex;justify-content:space-between;gap:10px}.sd .d{font-size:13.5px;color:var(--ink3);margin-top:2px}
+.anos{display:flex;gap:6px;margin-bottom:10px}.anos button{width:auto;margin:0;padding:8px 14px;font-size:14px;border-radius:999px;background:var(--card);color:var(--ink2);border:1px solid var(--line)}
+.anos button.on{background:var(--ink);color:var(--bg)}
+.pos{color:var(--ok)}.neg{color:var(--bad)}
 .spin{display:inline-block;width:22px;height:22px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp 1s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.spin{animation:none}}
@@ -59,7 +72,14 @@ button:disabled{opacity:.55}
   <h1>Página do afiliado</h1>
   <p>Associação Mastodonte</p>
 </header>
-<main><div id="sit"></div><h2 class="sec" id="tRen" hidden>Renovação 2027</h2><div class="card" id="box"><div style="text-align:center;padding:20px"><span class="spin"></span></div></div></main>
+<main>
+  <nav class="tabs" id="tabs" hidden>
+    <button data-t="sit" class="on">Minha situação</button><button data-t="trans">Transparência</button><button data-t="ren">Renovação</button>
+  </nav>
+  <section data-s="sit"><div id="sit"></div></section>
+  <section data-s="trans" hidden><div id="trans"><div class="card" style="text-align:center"><span class="spin"></span></div></div></section>
+  <section data-s="ren"><h2 class="sec" id="tRen" hidden>Renovação 2027</h2><div class="card" id="box"><div style="text-align:center;padding:20px"><span class="spin"></span></div></div></section>
+</main>
 
 <script>
 const CFG = { url: 'https://cknzysljezvpazonvibb.supabase.co', key: 'sb_publishable_ji48PdmWNR5nvQkXMhbbCQ_DEekbpVL' };
@@ -114,6 +134,65 @@ function mostrarSituacao(d){
     l.textContent = '📄 Ler o estatuto da associação';
     if (data?.signedUrl) location.href = data.signedUrl; else alert('Não foi possível abrir o estatuto agora.'); });
   document.getElementById('tRen').hidden = false;
+  document.getElementById('tabs').hidden = false;
+}
+
+/* ---------- abas ---------- */
+let transCarregada = false;
+function aba(t){
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+  document.querySelectorAll('section[data-s]').forEach(s => s.hidden = s.dataset.s !== t);
+  if (t === 'trans' && !transCarregada) carregarTransparencia();
+  window.scrollTo(0, 0);
+}
+document.getElementById('tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) aba(b.dataset.t); });
+
+/* ---------- transparência ---------- */
+const MESES_L = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+async function carregarTransparencia(ano){
+  const el = document.getElementById('trans');
+  el.innerHTML = '<div class="card" style="text-align:center"><span class="spin"></span></div>';
+  const { data, error } = await sb.rpc('transparencia', { p_token: token, p_ano: ano || null });
+  if (error || !data){ el.innerHTML = '<div class="card"><p class="muted">Não foi possível carregar agora. Tente de novo mais tarde.</p></div>'; return; }
+  transCarregada = true;
+  const tE = data.meses.reduce((s,m)=>s+Number(m.entradas||0),0), tS = data.meses.reduce((s,m)=>s+Number(m.saidas||0),0);
+  const mxS = Math.max(1, ...data.cat_saidas.map(c=>Number(c.total)));
+  const comComp = data.saidas.filter(x=>x.comprovante).length;
+  const VER = 30;
+  const linhaSaida = x => `<div class="sd"><div class="r"><b>${esc(x.descricao || x.categoria)}</b><b class="neg" style="white-space:nowrap">${brl(x.valor)}</b></div>
+    <div class="d">${fdata(x.data)}${x.descricao?' · '+esc(x.categoria):''}${x.evento?' · '+esc(x.evento):''}${x.comprovante?' · 📎 comprovante arquivado':''}</div></div>`;
+  el.innerHTML = `
+    ${(data.anos||[]).length > 1 ? `<div class="anos">${data.anos.map(a=>`<button class="${a===data.ano?'on':''}" onclick="carregarTransparencia(${a})">${a}</button>`).join('')}</div>` : ''}
+    <p class="muted" style="margin:0 4px 10px">📅 Prestação de contas das movimentações a partir de <b>${fdata(data.inicio)}</b>.</p>
+    <div class="kp">
+      <div class="card"><small>Entradas em ${data.ano}</small><b class="pos">${brl(tE)}</b></div>
+      <div class="card"><small>Saídas em ${data.ano}</small><b class="neg">${brl(tS)}</b></div>
+    </div>
+    <div class="card" style="margin-top:10px"><small class="muted" style="font-weight:700">Resultado do ano (entradas − saídas)</small>
+      <div style="font-family:var(--slab);font-size:24px" class="${tE-tS>=0?'pos':'neg'}">${brl(tE-tS)}</div></div>
+
+    <h2 class="sec">Para onde foi o dinheiro</h2>
+    <div class="card">${data.cat_saidas.length ? data.cat_saidas.map(c=>`<div class="bar"><div class="l"><span>${esc(c.categoria)}</span><b>${brl(c.total)}</b></div>
+      <div class="t"><div class="f" style="width:${(Number(c.total)/mxS*100).toFixed(1)}%"></div></div></div>`).join('') : '<p class="muted">Nenhuma saída neste ano.</p>'}</div>
+
+    <h2 class="sec">De onde veio o dinheiro</h2>
+    <div class="card">${data.cat_entradas.map(c=>`<div class="pg"><span>${esc(c.categoria)}</span><b class="pos">${brl(c.total)}</b></div>`).join('') || '<p class="muted">Nenhuma entrada neste ano.</p>'}</div>
+
+    <h2 class="sec">Mês a mês</h2>
+    <div class="card"><div class="mes"><b>Mês</b><b style="text-align:right">Entradas</b><b style="text-align:right">Saídas</b>
+      ${data.meses.map(m=>`<div>${MESES_L[m.mes-1]}</div><span class="pos">${brl(m.entradas)}</span><span class="neg">${brl(m.saidas)}</span>`).join('')}</div></div>
+
+    ${data.eventos.length ? `<h2 class="sec">Eventos</h2><div class="card">${data.eventos.map(e=>`<div class="sd"><div class="r"><b>${esc(e.nome)}</b><b class="${e.arrecadado-e.gasto>=0?'pos':'neg'}">${brl(e.arrecadado-e.gasto)}</b></div>
+      <div class="d">${e.data?fdata(e.data)+' · ':''}arrecadado ${brl(e.arrecadado)} · gasto ${brl(e.gasto)}</div></div>`).join('')}</div>` : ''}
+
+    <h2 class="sec">Todas as saídas</h2>
+    <p class="muted" style="margin:0 4px 8px">${data.saidas.length} saídas em ${data.ano} · ${comComp} com comprovante arquivado</p>
+    <div class="card" id="listaSaidas">${data.saidas.slice(0,VER).map(linhaSaida).join('') || '<p class="muted">Nenhuma saída registrada a partir dessa data ainda.</p>'}</div>
+    ${data.saidas.length > VER ? `<button id="maisSaidas" style="background:var(--card);color:var(--ink);border:1px solid var(--line)">Ver todas as ${data.saidas.length} saídas</button>` : ''}
+
+    <div class="card" style="margin-top:14px"><p class="muted" style="margin:0">🔒 Para proteger a privacidade, os nomes de quem recebeu os pagamentos não são mostrados. Os comprovantes ficam arquivados e podem ser examinados pelo <b>Conselho Fiscal</b> (Art. 28 do estatuto).</p></div>`;
+  const btn = document.getElementById('maisSaidas');
+  if (btn) btn.onclick = () => { document.getElementById('listaSaidas').innerHTML = data.saidas.map(linhaSaida).join(''); btn.remove(); };
 }
 
 function erro(msg){ box.innerHTML = `<div class="done"><h2>Link inválido</h2><p class="muted">${esc(msg)}</p></div>`; }

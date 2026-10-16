@@ -197,7 +197,7 @@ nav.tabs button.on{color:var(--accent)}
    Vazio = MODO DEMONSTRAÇÃO (dados ficam só no aparelho).
    ===================================================================== */
 const CFG = { url: 'https://cknzysljezvpazonvibb.supabase.co', key: 'sb_publishable_ji48PdmWNR5nvQkXMhbbCQ_DEekbpVL' };
-const VERSAO = 'v6';
+const VERSAO = 'v7';
 const DEMO = !CFG.url || !CFG.key;
 const sb = DEMO ? null : supabase.createClient(CFG.url, CFG.key);
 
@@ -260,10 +260,10 @@ const IC = {
 };
 
 /* ---------------- banco de dados (Supabase ou local) ---------------- */
-const TABELAS = ['afiliados','movimentos','eventos','evento_tarefas','usuarios','renovacoes','documentos','indicacoes'];
+const TABELAS = ['afiliados','movimentos','eventos','evento_tarefas','usuarios','renovacoes','documentos','indicacoes','configuracoes'];
 // CPF, documento e link de renovação não vêm nessas colunas: só o administrador recebe, à parte
 const COLS = { afiliados:'id,nome,telefone,endereco,valor_mensal,dia_vencimento,inicio,ativo,obs,criado_em,categoria',
-  movimentos:'id,data,descricao,nome,valor,categoria,afiliado_id,evento_id,origem,chave,criado_por,criado_em,obs,comprovante' };
+  movimentos:'id,data,descricao,nome,valor,categoria,afiliado_id,evento_id,origem,chave,criado_por,criado_em,obs,comprovante,descricao_publica' };
 const ehAdm = () => S.me && S.me.papel === 'adm';
 const ehFin = () => S.me && S.me.papel !== 'adm';
 const Local = {
@@ -279,7 +279,7 @@ const DB = {
     if (DEMO) return JSON.parse(JSON.stringify(Local.load()[t]));
     const out=[]; const step=1000;
     for (let i=0;;i+=step){
-      const { data, error } = await sb.from(t).select(COLS[t]||'*').order(t==='usuarios'?'email':'id').range(i, i+step-1);
+      const { data, error } = await sb.from(t).select(COLS[t]||'*').order(t==='usuarios'?'email':t==='configuracoes'?'chave':'id').range(i, i+step-1);
       if (error) throw error; out.push(...data); if (data.length < step) break;
     }
     return out;
@@ -319,14 +319,14 @@ function erroMsg(e){ const m = e?.message || String(e);
   return m; }
 
 /* ---------------- estado ---------------- */
-const S = { me:null, tab: LS.get('masto_tab','inicio'), afiliados:[], movimentos:[], eventos:[], tarefas:[], usuarios:[], renovacoes:[], documentos:[], indicacoes:[],
+const S = { me:null, tab: LS.get('masto_tab','inicio'), afiliados:[], movimentos:[], eventos:[], tarefas:[], usuarios:[], renovacoes:[], documentos:[], indicacoes:[], configuracoes:[],
   filtroAf:'todos', buscaAf:'', mesFin: hojeISO().slice(0,7), tipoFin:'saida', imp:null, impFiltro:'identificar', priv: LS.get('masto_priv',false) };
 
 async function carregar(...tabs){
   tabs = tabs.length ? tabs : TABELAS;
   if (!DEMO && !ehAdm()) tabs = tabs.filter(t => t !== 'renovacoes' && t !== 'indicacoes');
-  const map = {afiliados:'afiliados', movimentos:'movimentos', eventos:'eventos', evento_tarefas:'tarefas', usuarios:'usuarios', renovacoes:'renovacoes', documentos:'documentos', indicacoes:'indicacoes'};
-  await Promise.all(tabs.map(async t => { try { S[map[t]] = await DB.all(t); } catch(e){ if (['renovacoes','documentos','indicacoes'].includes(t)) S[map[t]] = []; else throw e; } }));
+  const map = {afiliados:'afiliados', movimentos:'movimentos', eventos:'eventos', evento_tarefas:'tarefas', usuarios:'usuarios', renovacoes:'renovacoes', documentos:'documentos', indicacoes:'indicacoes', configuracoes:'configuracoes'};
+  await Promise.all(tabs.map(async t => { try { S[map[t]] = await DB.all(t); } catch(e){ if (['renovacoes','documentos','indicacoes','configuracoes'].includes(t)) S[map[t]] = []; else throw e; } }));
   if (!DEMO && ehAdm()){
     if (tabs.includes('afiliados')){
       const { data } = await sb.rpc('afiliados_privado');
@@ -374,6 +374,7 @@ function statusAf(a, hoje = new Date()){
   if (dias <= 5) return {k:'vence', txt: dias<=0 ? 'Vence hoje' : `Vence em ${dias} dia${dias>1?'s':''}`, pago, pagoAte, prox:dv};
   return {k:'emdia', txt:'Em dia', pago, pagoAte, prox:dv};
 }
+const transIni = () => (S.configuracoes.find(c => c.chave === 'transparencia_inicio') || {}).valor || '2000-01-01';
 const contribAtivos = () => S.afiliados.filter(a => a.ativo && a.categoria !== 'fundador').length;
 const idade = iso => { if (!iso) return null; const n = new Date(iso+'T12:00'), h = new Date(); let i = h.getFullYear()-n.getFullYear();
   if (h.getMonth()<n.getMonth() || (h.getMonth()===n.getMonth() && h.getDate()<n.getDate())) i--; return i; };
@@ -1046,7 +1047,10 @@ function vFinanceiro(){
   const ent = doMes.filter(m=>m.valor>0), sai = doMes.filter(m=>m.valor<0);
   const tE = ent.reduce((s,m)=>s+m.valor,0), tS = sai.reduce((s,m)=>s-m.valor,0);
   const naoid = S.movimentos.filter(m=>m.valor>0 && !m.afiliado_id && (mes==='tudo'||m.data.startsWith(mes)) && m.categoria==='Boletos (sem identificação)');
-  const semComp = sai.filter(m => !m.comprovante);
+  const desde = transIni();
+  const saiNova = sai.filter(m => m.data >= desde);
+  const semComp = saiNova.filter(m => !m.comprovante);
+  const semPub = saiNova.filter(m => !m.descricao_publica).length;
   let lst = S.tipoFin==='entrada' ? ent : S.tipoFin==='naoid' ? naoid : sai;
   if (S.tipoFin==='saida' && S.soSemComp) lst = semComp;
   const porCat = {}; lst.forEach(m=>{ const c=m.categoria||'Sem categoria'; porCat[c]=(porCat[c]||0)+Math.abs(m.valor); });
@@ -1069,9 +1073,9 @@ function vFinanceiro(){
       <button class="${S.tipoFin==='naoid'?'on':''}" onclick="S.tipoFin='naoid';vFinanceiro()">Boletos s/ dono${naoid.length?` (${naoid.length})`:''}</button>
     </div>
     ${cats.length && S.tipoFin!=='naoid' ? `<div class="card bars" style="margin-top:12px">${cats.map(([c,v])=>`<div class="b"><div class="bl"><span>${esc(c)}</span><b class="val">${brl(v)}</b></div><div class="bt"><div class="bf" style="width:${(v/mx*100).toFixed(1)}%;${S.tipoFin==='saida'?'background:var(--bad)':'background:var(--ok)'}"></div></div></div>`).join('')}</div>` : ''}
-    ${S.tipoFin==='saida' && sai.length ? `<div class="card" style="margin-top:12px;${semComp.length?'background:var(--warn-soft);border:0':'background:var(--ok-soft);border:0'}">
-      <div class="row"><div class="grow"><b>${semComp.length ? `${semComp.length} de ${sai.length} saídas sem comprovante` : 'Todas as saídas têm comprovante ✔'}</b>
-      <div class="muted">Toque numa saída para anexar a foto da nota e escrever para que foi.</div></div>
+    ${S.tipoFin==='saida' && saiNova.length ? `<div class="card" style="margin-top:12px;${semComp.length||semPub?'background:var(--warn-soft);border:0':'background:var(--ok-soft);border:0'}">
+      <div class="row"><div class="grow"><b>${semComp.length ? `${semComp.length} de ${saiNova.length} saídas desde ${fdata(desde)} sem comprovante` : `Saídas desde ${fdata(desde)} com comprovante ✔`}</b>
+      <div class="muted">${semPub ? `${semPub} sem descrição para os associados. ` : ''}Toque numa saída para anexar a nota e escrever para que foi.</div></div>
       ${semComp.length ? `<button class="btn sm ${S.soSemComp?'acc':'ghost'}" onclick="S.soSemComp=!S.soSemComp;vFinanceiro()">${S.soSemComp?'Ver todas':'Só sem comprovante'}</button>` : ''}</div></div>` : ''}
     ${S.tipoFin==='naoid' ? `<p class="muted" style="margin:12px 2px 0">O banco junta os boletos do dia numa linha só. Toque num boleto e distribua entre os afiliados que pagaram (o relatório de cobrança do banco mostra quem foi).</p>` : ''}
     <div style="margin-top:12px">${lst.length ? `<div class="list">${lst.sort((a,b)=>b.data.localeCompare(a.data)||b.id-a.id).map(linhaMov).join('')}</div>` : '<div class="card empty">Nada nesse período.</div>'}</div>`;
@@ -1102,7 +1106,9 @@ function formMov(id, pre={}){
     <label>Categoria</label><select name="categoria" id="mCat"></select>
     <div id="mAfBox"><label>Mensalidade de (afiliado)</label><select name="afiliado_id"><option value="">— nenhum —</option>${opsAf.map(a=>`<option value="${a.id}" ${a.id===m.afiliado_id?'selected':''}>${esc(a.nome)}</option>`).join('')}</select></div>
     <label>Evento</label><select name="evento_id"><option value="">— nenhum —</option>${S.eventos.map(e=>`<option value="${e.id}" ${e.id===m.evento_id?'selected':''}>${esc(e.nome)}${e.data?' ('+fdata(e.data)+')':''}</option>`).join('')}</select>
-    <label>Detalhes (para que foi, quem recebeu)</label><textarea name="obs" placeholder="Ex.: carne e carvão para o churrasco do dia 12">${esc(m.obs)}</textarea>
+    <label>Detalhes internos (para que foi, quem recebeu)</label><textarea name="obs" placeholder="Ex.: pago ao açougue do João, nota 1234">${esc(m.obs)}</textarea>
+    <div id="pubBox"><label>Descrição para os associados 👁️</label><input name="descricao_publica" maxlength="120" value="${esc(m.descricao_publica)}" placeholder="Ex.: Carne e carvão para o churrasco de 12/10">
+    <div class="muted" style="margin-top:4px">Aparece na página de transparência. Não escreva nome de pessoa nem de empresa.</div></div>
     <label>Comprovante (foto da nota ou PDF)</label>
     <div id="cpBox">${m.comprovante ? '<div class="muted"><span class="spin"></span> Carregando comprovante…</div>' : '<div class="muted">Nenhum comprovante anexado.</div>'}</div>
     <input type="file" name="arq" accept="image/*,application/pdf" style="margin-top:8px">
@@ -1115,7 +1121,7 @@ function formMov(id, pre={}){
   const setTipo = t => { $('#fMov [name=tipo]').value=t; $('#segT').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
     const cs = t==='entrada'?CAT_ENT:CAT_SAI; const cur = m.categoria;
     $('#mCat').innerHTML = cs.concat(cur && !cs.includes(cur)?[cur]:[]).map(c=>`<option ${c===cur?'selected':''}>${esc(c)}</option>`).join('');
-    $('#mAfBox').classList.toggle('hide', t!=='entrada'); };
+    $('#mAfBox').classList.toggle('hide', t!=='entrada'); $('#pubBox').classList.toggle('hide', t!=='saida'); };
   $('#segT').querySelectorAll('button').forEach(b=>b.onclick=()=>setTipo(b.dataset.t));
   setTipo(tipo);
   if (id && m.comprovante) mostrarComprovante(m, $('#cpBox'));
@@ -1126,7 +1132,7 @@ function formMov(id, pre={}){
     if (!(v>0)) return $('#mErr').textContent='Valor inválido.';
     const afId = t==='entrada' && f.get('afiliado_id') ? +f.get('afiliado_id') : null;
     const row = { categoria: afId ? 'Mensalidade' : f.get('categoria'), afiliado_id: afId, evento_id: f.get('evento_id') ? +f.get('evento_id') : null,
-      obs: (f.get('obs')||'').trim() || null };
+      obs: (f.get('obs')||'').trim() || null, descricao_publica: t==='saida' ? ((f.get('descricao_publica')||'').trim() || null) : null };
     if (m.origem!=='extrato') Object.assign(row, { data: f.get('data'), valor: t==='entrada'? v : -v, descricao: f.get('descricao').trim() });
     const arq = ev.target.querySelector('[name=arq]').files[0];
     const btn = ev.target.querySelector('button.acc'); btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Salvando…';
@@ -1495,10 +1501,18 @@ function abrirConfig(){
         <select name="papel"><option value="financeiro">Financeiro (só pagamentos e saídas, sem CPF)</option><option value="adm">Administrador (tudo)</option></select></div>
         <button class="btn acc wide" style="margin-top:10px">Liberar acesso</button>
         <p class="muted">Depois a pessoa abre o app, toca em <b>Primeiro acesso</b> e cria a senha com esse e-mail.</p></form>` : ''}
+    ${adm ? `<div class="sec-h"><h2 style="font-size:18px">Transparência</h2></div>
+      <form class="f" id="fTr"><label>Mostrar aos associados as movimentações a partir de</label>
+        <div class="row"><input type="date" name="ini" value="${transIni()}" class="grow" required><button class="btn sm acc" style="min-height:46px">Salvar</button></div>
+        <p class="muted">O que for anterior a essa data não aparece na página de transparência.</p></form>` : ''}
     ${adm ? `<div class="sec-h"><h2 style="font-size:18px">Dados</h2></div>
     <button class="btn ghost wide" onclick="exportar()">Baixar planilha (afiliados + financeiro)</button>` : ''}
     <button class="btn danger wide" style="margin-top:10px" onclick="sair()">${IC.out} Sair</button>
     <p class="muted" style="text-align:center;margin-top:14px">Mastodonte Gestão ${VERSAO}${DEMO?' · demonstração':''}</p>`);
+  $('#fTr')?.addEventListener('submit', async ev => { ev.preventDefault(); const v = new FormData(ev.target).get('ini');
+    try { if (DEMO) throw new Error('Indisponível na demonstração.');
+      const { error } = await sb.from('configuracoes').upsert({ chave:'transparencia_inicio', valor:v }); if (error) throw error;
+      await carregar('configuracoes'); toast('Data da transparência salva'); render(); } catch(e){ toast(erroMsg(e)); } });
   $('#fU')?.addEventListener('submit', async ev => { ev.preventDefault(); const f=new FormData(ev.target);
     const email = f.get('email').trim().toLowerCase();
     if (S.usuarios.some(u=>u.email===email)) return toast('Esse e-mail já está na lista.');
