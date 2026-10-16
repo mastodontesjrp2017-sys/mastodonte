@@ -197,7 +197,7 @@ nav.tabs button.on{color:var(--accent)}
    Vazio = MODO DEMONSTRAÇÃO (dados ficam só no aparelho).
    ===================================================================== */
 const CFG = { url: 'https://cknzysljezvpazonvibb.supabase.co', key: 'sb_publishable_ji48PdmWNR5nvQkXMhbbCQ_DEekbpVL' };
-const VERSAO = 'v9';
+const VERSAO = 'v10';
 const DEMO = !CFG.url || !CFG.key;
 const sb = DEMO ? null : supabase.createClient(CFG.url, CFG.key);
 
@@ -205,6 +205,8 @@ const sb = DEMO ? null : supabase.createClient(CFG.url, CFG.key);
 const MENSALIDADE_PADRAO = 40;   // R$ por mês
 const DIA_VENC_PADRAO = 20;      // dia do vencimento
 const PIX_CHAVE = '55821595000138';   // chave PIX (CNPJ) da Associação Mastodonte
+const TAMANHOS = ['PP','P','M','G','GG','XG','XGG'];
+const selCamisa = (nome, atual) => `<select name="${nome}"><option value="">— não informado —</option>${TAMANHOS.map(t=>`<option ${t===atual?'selected':''}>${t}</option>`).join('')}</select>`;
 const LIMITE_CONTRIB = 250;      // Art. 9º do estatuto: máximo de sócios contribuintes (pode ser aumentado em assembleia)
 const MESES_ATRASO = 3;          // a partir de quantos meses sem pagar conta como "em atraso"
 
@@ -263,7 +265,7 @@ const IC = {
 /* ---------------- banco de dados (Supabase ou local) ---------------- */
 const TABELAS = ['afiliados','movimentos','eventos','evento_tarefas','usuarios','renovacoes','documentos','indicacoes','configuracoes'];
 // CPF, documento e link de renovação não vêm nessas colunas: só o administrador recebe, à parte
-const COLS = { afiliados:'id,nome,telefone,endereco,valor_mensal,dia_vencimento,inicio,ativo,obs,criado_em,categoria',
+const COLS = { afiliados:'id,nome,telefone,endereco,valor_mensal,dia_vencimento,inicio,ativo,obs,criado_em,categoria,tamanho_camisa',
   movimentos:'id,data,descricao,nome,valor,categoria,afiliado_id,evento_id,origem,chave,criado_por,criado_em,obs,comprovante,descricao_publica,anexos' };
 const ehAdm = () => S.me && S.me.papel === 'adm';
 const ehFin = () => S.me && S.me.papel !== 'adm';
@@ -442,11 +444,15 @@ function abrirRenovados(){
         <dt>Nascimento</dt><dd>${r.nascimento?fdata(r.nascimento):'—'}</dd>
         <dt>Endereço</dt><dd>${esc(r.endereco || a.endereco)||'—'}</dd>
         <dt>CPF</dt><dd>${esc(fmtDoc(a.cpf))||'—'}</dd>
+        <dt>Camisa</dt><dd>${esc(r.tamanho_camisa || a.tamanho_camisa)||'—'}</dd>
         <dt>Pagamento</dt><dd>${esc(r.forma_pagamento)||'—'}</dd>
         <dt>Renovou em</dt><dd>${fdata(r.criado_em)}</dd>
         ${r.obs?`<dt>Obs.</dt><dd>${esc(r.obs)}</dd>`:''}
       </dl></div>`; };
+  const cam = {}; lst.forEach(({r,a}) => { const t = r.tamanho_camisa || a.tamanho_camisa || 'Não informado'; cam[t] = (cam[t]||0) + 1; });
+  const ordemCam = [...TAMANHOS, 'Não informado'].filter(t => cam[t]);
   abrirSheet(`<h3>Renovados ${ANO_RENOV}</h3><p class="muted">${lst.length} afiliado${lst.length!==1?'s':''}, em ordem alfabética, com os dados que eles mesmos atualizaram.</p>
+    ${lst.length ? `<div class="card" style="margin-top:10px"><b>Camisas</b><div class="row" style="flex-wrap:wrap;gap:6px;margin-top:8px">${ordemCam.map(t=>`<span class="badge ${t==='Não informado'?'b-mute':'b-acc'}">${t}: ${cam[t]}</span>`).join('')}</div></div>` : ''}
     ${lst.length ? `<input class="search" style="margin-top:10px" placeholder="Buscar pelo nome" oninput="const q=norm(this.value);document.querySelectorAll('#renLista>.card').forEach(c=>c.classList.toggle('hide',!!q&&!norm(c.textContent).includes(q)))">
       <button class="btn ghost wide" style="margin-top:10px" onclick="exportarRenovados()">Baixar planilha dos renovados</button>
       <div id="renLista">${lst.map(item).join('')}</div>` : '<div class="card empty" style="margin-top:10px">Ninguém renovou ainda.</div>'}
@@ -457,7 +463,7 @@ async function exportarRenovados(){
     if (!window.XLSX) await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
     const rows = S.renovacoes.filter(r => r.ano === ANO_RENOV).map(r => { const a = S.afiliados.find(x => x.id === r.afiliado_id) || {};
       return { Nome: r.nome || a.nome, Telefone: fmtTel(r.telefone || a.telefone), 'E-mail': r.email || '', Nascimento: r.nascimento ? fdata(r.nascimento) : '',
-        Endereço: r.endereco || a.endereco || '', CPF: fmtDoc(a.cpf), Pagamento: r.forma_pagamento || '', 'Renovou em': fdata(r.criado_em), Obs: r.obs || '' }; })
+        Endereço: r.endereco || a.endereco || '', CPF: fmtDoc(a.cpf), Camisa: r.tamanho_camisa || a.tamanho_camisa || '', Pagamento: r.forma_pagamento || '', 'Renovou em': fdata(r.criado_em), Obs: r.obs || '' }; })
       .sort((x,y) => (x.Nome||'').localeCompare(y.Nome||'', 'pt-BR'));
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Renovados ' + ANO_RENOV);
     XLSX.writeFile(wb, `renovados-${ANO_RENOV}.xlsx`);
@@ -702,6 +708,7 @@ function formAf(id, pre={}){
     <div><label>Dia do vencimento</label><input name="dia_vencimento" type="number" min="1" max="31" value="${a.dia_vencimento||DIA_VENC_PADRAO}"></div></div>
     <div class="g2"><div><label>Cobrar desde (mês)</label><input name="inicio" type="month" value="${(a.inicio||'').slice(0,7)}"></div>
     <div><label>Situação</label><select name="ativo"><option value="1" ${a.ativo?'selected':''}>Ativo</option><option value="0" ${!a.ativo?'selected':''}>Inativo</option></select></div></div>
+    <label>Tamanho da camisa</label>${selCamisa('camisa', a.tamanho_camisa)}
     <label>Categoria (Art. 6º do estatuto)</label><select name="categoria"><option value="contribuinte" ${a.categoria!=='fundador'?'selected':''}>Contribuinte</option><option value="fundador" ${a.categoria==='fundador'?'selected':''}>Fundador</option></select>
     <label>Observações</label><textarea name="obs">${esc(a.obs)}</textarea>
     ${!DEMO ? `<label>Foto do rosto ${a.foto?'(já tem foto — escolha outra para trocar)':''}</label><input type="file" name="foto" accept="image/*">` : ''}
@@ -720,7 +727,7 @@ function formAf(id, pre={}){
     const row = { nome: f.get('nome').trim(), cpf: doc || null, telefone: dig(f.get('telefone')) || null, endereco: f.get('endereco').trim() || null,
       valor_mensal: valor, dia_vencimento: Math.min(31, Math.max(1, +f.get('dia_vencimento')||DIA_VENC_PADRAO)),
       inicio: (f.get('inicio') || hojeISO().slice(0,7)) + '-01', ativo: f.get('ativo')==='1', obs: f.get('obs').trim() || null,
-      categoria: f.get('categoria') || 'contribuinte' };
+      categoria: f.get('categoria') || 'contribuinte', tamanho_camisa: f.get('camisa') || null };
     const antes = id ? S.afiliados.find(x=>x.id===id) : null;
     const viraContribAtivo = row.ativo && row.categoria !== 'fundador' && !(antes && antes.ativo && antes.categoria !== 'fundador');
     if (viraContribAtivo && contribAtivos() >= LIMITE_CONTRIB) return $('#afErr').textContent = `Limite de ${LIMITE_CONTRIB} sócios contribuintes atingido (Art. 9º). Ele só pode ser aumentado em assembleia.`;
@@ -765,6 +772,7 @@ function abrirAf(id){
     <dl class="kv">
       <dt>Doação</dt><dd class="val">${brl(a.valor_mensal)} / mês · vence dia ${a.dia_vencimento}</dd>
       <dt>Categoria</dt><dd>${a.categoria==='fundador'?'Fundador':'Contribuinte'}</dd>
+      <dt>Camisa</dt><dd>${esc(a.tamanho_camisa)||'—'}</dd>
       <dt>Cobrar desde</dt><dd>${compTxt({y:+a.inicio.slice(0,4), m:+a.inicio.slice(5,7)})}</dd>
       <dt>Pago até</dt><dd>${compTxt(s.pagoAte)}</dd>
       <dt>Total pago</dt><dd class="val">${brl(s.pago)}</dd>
@@ -970,6 +978,7 @@ function formIndicacao(){
     <div class="g2"><div><label>Telefone (WhatsApp)</label><input name="tel" inputmode="tel" placeholder="(17) 99999-9999"></div>
     <div><label>E-mail</label><input name="email" type="email" inputmode="email"></div></div>
     <label>Endereço</label><input name="end" placeholder="Rua, número, bairro, cidade">
+    <label>Tamanho da camisa</label>${selCamisa('camisa', '')}
     <label>Indicado por</label><select name="por"><option value="">— escolha o afiliado —</option>${opsAf.map(a=>`<option>${esc(a.nome)}</option>`).join('')}</select>
     <label>Observações</label><textarea name="obs"></textarea>
     <label class="row" style="font-weight:600;color:var(--ink);margin-top:14px"><input type="checkbox" name="ok" required style="width:22px;height:22px;flex:none"> A pessoa autorizou o uso da foto e dos dados para o cadastro</label>
@@ -992,7 +1001,7 @@ function formIndicacao(){
     try {
       const path = await enviarFoto(foto, `indicacoes/${cpf}`);
       await DB.ins('indicacoes', { nome: f.get('nome').trim(), cpf, telefone: dig(f.get('tel')) || null, email: f.get('email').trim() || null,
-        nascimento: f.get('nasc') || null, endereco: f.get('end').trim() || null, foto: path, indicado_por: f.get('por') || null, obs: f.get('obs').trim() || null });
+        nascimento: f.get('nasc') || null, endereco: f.get('end').trim() || null, foto: path, indicado_por: f.get('por') || null, tamanho_camisa: f.get('camisa') || null, obs: f.get('obs').trim() || null });
       await carregar('indicacoes'); fecharSheet(); toast('Indicação salva'); render();
     } catch(e){ err.textContent = erroMsg(e); btn.disabled = false; btn.textContent = 'Salvar indicação'; }
   });
@@ -1009,6 +1018,7 @@ function abrirIndicacao(id){
       <dt>Telefone</dt><dd>${esc(fmtTel(i.telefone))||'—'}</dd>
       <dt>E-mail</dt><dd>${esc(i.email)||'—'}</dd>
       <dt>Endereço</dt><dd>${esc(i.endereco)||'—'}</dd>
+      <dt>Camisa</dt><dd>${esc(i.tamanho_camisa)||'—'}</dd>
       <dt>Indicado por</dt><dd>${esc(i.indicado_por)||'—'}</dd>
       <dt>Data</dt><dd>${fdata(i.criado_em)}</dd>
       ${i.obs?`<dt>Obs.</dt><dd>${esc(i.obs)}</dd>`:''}
@@ -1026,7 +1036,7 @@ async function aprovarIndicacao(id){
   if (!(await confirmar('Aprovar indicação?', `${i.nome} será cadastrado como afiliado (R$ ${MENSALIDADE_PADRAO} por mês, vencimento dia ${DIA_VENC_PADRAO}, a partir deste mês).`, 'Aprovar'))) return;
   try {
     const novo = (await DB.ins('afiliados', { nome: i.nome, cpf: i.cpf, telefone: i.telefone, endereco: i.endereco, foto: i.foto,
-      valor_mensal: MENSALIDADE_PADRAO, dia_vencimento: DIA_VENC_PADRAO, inicio: hojeISO().slice(0,7)+'-01', ativo: true, categoria: 'contribuinte',
+      valor_mensal: MENSALIDADE_PADRAO, dia_vencimento: DIA_VENC_PADRAO, inicio: hojeISO().slice(0,7)+'-01', ativo: true, categoria: 'contribuinte', tamanho_camisa: i.tamanho_camisa || null,
       obs: [i.indicado_por ? 'Indicado por ' + i.indicado_por : null, i.email ? 'E-mail: ' + i.email : null, i.nascimento ? 'Nascimento: ' + fdata(i.nascimento) : null].filter(Boolean).join(' · ') || null }))[0];
     await DB.upd('indicacoes', {id}, { status:'aprovada', afiliado_id: novo?.id || null });
     await carregar('afiliados','indicacoes'); toast('Afiliado cadastrado'); render(); abrirIndicacao(id);
@@ -1580,7 +1590,7 @@ async function exportar(){
   try {
     if (!window.XLSX) await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
     const af = S.afiliados.map(a=>{ const s=statusAf(a); return { Nome:a.nome, 'CPF/CNPJ':fmtDoc(a.cpf), Telefone:fmtTel(a.telefone), Endereço:a.endereco||'',
-      'Doação/mês':a.valor_mensal, 'Dia venc.':a.dia_vencimento, 'Cobrar desde':a.inicio, Situação:s.txt, 'Pago até':compTxt(s.pagoAte), 'Em aberto':s.deve||0, 'Total pago':s.pago, Ativo:a.ativo?'sim':'não', ['Renovou '+ANO_RENOV]: renovou(a)?'sim':'não', 'Link renovação': linkRenov(a)||'' }; });
+      'Doação/mês':a.valor_mensal, 'Dia venc.':a.dia_vencimento, 'Cobrar desde':a.inicio, Situação:s.txt, 'Pago até':compTxt(s.pagoAte), 'Em aberto':s.deve||0, 'Total pago':s.pago, Camisa: a.tamanho_camisa||'', Ativo:a.ativo?'sim':'não', ['Renovou '+ANO_RENOV]: renovou(a)?'sim':'não', 'Link renovação': linkRenov(a)||'' }; });
     const mv = S.movimentos.filter(m=>m.valor).sort((a,b)=>a.data.localeCompare(b.data)).map(m=>({ Data:fdata(m.data), Descrição:m.descricao, Nome:m.nome||'', 'CPF/CNPJ':fmtDoc(m.documento),
       Valor:m.valor, Categoria:m.categoria||'', Afiliado:S.afiliados.find(a=>a.id===m.afiliado_id)?.nome||'', Evento:S.eventos.find(e=>e.id===m.evento_id)?.nome||'', Origem:m.origem }));
     const wb = XLSX.utils.book_new();

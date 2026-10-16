@@ -269,6 +269,8 @@ function form(d){
       <input id="nasc" name="nasc" type="date" value="${esc(d.nascimento||'')}">
       <label for="end">Endereço</label>
       <input id="end" name="end" autocomplete="street-address" placeholder="Rua, número, bairro, cidade" value="${esc(d.endereco)}">
+      <label for="camisa">Tamanho da camisa</label>
+      <select id="camisa" name="camisa"><option value="">Escolha o tamanho</option>${['PP','P','M','G','GG','XG','XGG'].map(t=>`<option ${t===d.tamanho_camisa?'selected':''}>${t}</option>`).join('')}</select>
       <div class="card" style="margin-top:16px;padding:12px 14px;background:var(--bg);box-shadow:none">
         <b>Pagamento por PIX</b>
         <p class="muted" style="margin-top:4px">A partir de ${ANO}, as mensalidades serão pagas por PIX. Faça o PIX da sua própria conta, com o seu CPF, para o pagamento ser identificado automaticamente.</p>
@@ -290,11 +292,12 @@ async function enviar(ev){
   if (!f.get('nome').trim()) return err.textContent = 'Preencha o nome completo.';
   const tel = dig(f.get('tel'));
   if (tel && (tel.length < 10 || tel.length > 11)) return err.textContent = 'Confira o telefone: use DDD + número.';
+  if (!f.get('camisa')) return err.textContent = 'Escolha o tamanho da camisa.';
   if (!document.getElementById('ok').checked) return err.textContent = 'Marque a caixa para confirmar a renovação.';
   btn.disabled = true; btn.textContent = 'Enviando…';
   const { error } = await sb.rpc('renovacao_enviar', { p_token: token, p_nome: f.get('nome').trim(), p_telefone: tel,
     p_email: f.get('email').trim(), p_endereco: f.get('end').trim(), p_nascimento: f.get('nasc') || null,
-    p_forma: 'PIX', p_obs: f.get('obs').trim() });
+    p_forma: 'PIX', p_obs: f.get('obs').trim(), p_camisa: f.get('camisa') || null });
   if (error){ btn.disabled = false; btn.textContent = 'Confirmar renovação';
     return err.textContent = 'Não foi possível enviar. Verifique sua internet e tente de novo.'; }
   box.innerHTML = `<div class="done"><div class="ic">✓</div><h2>Renovação confirmada!</h2>
