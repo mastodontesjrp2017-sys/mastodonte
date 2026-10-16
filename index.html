@@ -197,7 +197,7 @@ nav.tabs button.on{color:var(--accent)}
    Vazio = MODO DEMONSTRAÇÃO (dados ficam só no aparelho).
    ===================================================================== */
 const CFG = { url: 'https://cknzysljezvpazonvibb.supabase.co', key: 'sb_publishable_ji48PdmWNR5nvQkXMhbbCQ_DEekbpVL' };
-const VERSAO = 'v3';
+const VERSAO = 'v4';
 const DEMO = !CFG.url || !CFG.key;
 const sb = DEMO ? null : supabase.createClient(CFG.url, CFG.key);
 
@@ -257,6 +257,11 @@ const IC = {
 
 /* ---------------- banco de dados (Supabase ou local) ---------------- */
 const TABELAS = ['afiliados','movimentos','eventos','evento_tarefas','usuarios','renovacoes'];
+// CPF, documento e link de renovação não vêm nessas colunas: só o administrador recebe, à parte
+const COLS = { afiliados:'id,nome,telefone,endereco,valor_mensal,dia_vencimento,inicio,ativo,obs,criado_em',
+  movimentos:'id,data,descricao,nome,valor,categoria,afiliado_id,evento_id,origem,chave,criado_por,criado_em,obs,comprovante' };
+const ehAdm = () => S.me && S.me.papel === 'adm';
+const ehFin = () => S.me && S.me.papel !== 'adm';
 const Local = {
   db: null,
   load(){ if (this.db) return this.db;
@@ -270,7 +275,7 @@ const DB = {
     if (DEMO) return JSON.parse(JSON.stringify(Local.load()[t]));
     const out=[]; const step=1000;
     for (let i=0;;i+=step){
-      const { data, error } = await sb.from(t).select('*').order(t==='usuarios'?'email':'id').range(i, i+step-1);
+      const { data, error } = await sb.from(t).select(COLS[t]||'*').order(t==='usuarios'?'email':'id').range(i, i+step-1);
       if (error) throw error; out.push(...data); if (data.length < step) break;
     }
     return out;
@@ -286,8 +291,8 @@ const DB = {
     let res=[];
     for (let i=0;i<rows.length;i+=500){
       const part = rows.slice(i,i+500);
-      const q = ignorarDup ? sb.from(t).upsert(part,{onConflict:'chave', ignoreDuplicates:true}).select()
-                           : sb.from(t).insert(part).select();
+      const q = ignorarDup ? sb.from(t).upsert(part,{onConflict:'chave', ignoreDuplicates:true}).select(COLS[t]||'*')
+                           : sb.from(t).insert(part).select(COLS[t]||'*');
       const { data, error } = await q; if (error) throw error; res = res.concat(data||[]);
     }
     return res;
@@ -315,8 +320,21 @@ const S = { me:null, tab: LS.get('masto_tab','inicio'), afiliados:[], movimentos
 
 async function carregar(...tabs){
   tabs = tabs.length ? tabs : TABELAS;
+  if (!DEMO && !ehAdm()) tabs = tabs.filter(t => t !== 'renovacoes');
   const map = {afiliados:'afiliados', movimentos:'movimentos', eventos:'eventos', evento_tarefas:'tarefas', usuarios:'usuarios', renovacoes:'renovacoes'};
   await Promise.all(tabs.map(async t => { try { S[map[t]] = await DB.all(t); } catch(e){ if (t==='renovacoes') S.renovacoes = []; else throw e; } }));
+  if (!DEMO && ehAdm()){
+    if (tabs.includes('afiliados')){
+      const { data } = await sb.rpc('afiliados_privado');
+      const mp = new Map((data||[]).map(r=>[r.id, r]));
+      S.afiliados.forEach(a => { const r = mp.get(a.id); if (r){ a.cpf = r.cpf; a.token_renovacao = r.token_renovacao; } });
+    }
+    if (tabs.includes('movimentos')){
+      const { data } = await sb.rpc('movimentos_docs');
+      const mp = new Map((data||[]).map(r=>[r.id, r.documento]));
+      S.movimentos.forEach(m => { if (mp.has(m.id)) m.documento = mp.get(m.id); });
+    }
+  }
   S.movimentos.forEach(m => m.valor = Number(m.valor));
   S.afiliados.forEach(a => { a.valor_mensal = Number(a.valor_mensal)||0; });
 }
@@ -377,6 +395,40 @@ function waRenov(a){
   let tel = dig(a.telefone);
   if (tel && tel.length <= 11) tel = '55' + tel;
   return (tel ? `https://wa.me/${tel}` : 'https://wa.me/') + `?text=${encodeURIComponent(msg)}`;
+}
+function abrirRenovados(){
+  const lst = S.renovacoes.filter(r => r.ano === ANO_RENOV)
+    .map(r => ({ r, a: S.afiliados.find(x => x.id === r.afiliado_id) || {} }))
+    .sort((x,y) => (x.r.nome||x.a.nome||'').localeCompare(y.r.nome||y.a.nome||'', 'pt-BR'));
+  const item = ({r,a}) => { const tel = r.telefone || a.telefone; let w = dig(tel); if (w && w.length<=11) w = '55'+w;
+    return `<div class="card" style="margin-top:10px">
+      <div class="row"><b class="grow">${esc(r.nome || a.nome)}</b>${w?`<a class="wa" href="https://wa.me/${w}" target="_blank" rel="noopener" aria-label="WhatsApp">${IC.wa}</a>`:''}</div>
+      <dl class="kv" style="margin-top:6px">
+        <dt>Telefone</dt><dd>${esc(fmtTel(tel))||'—'}</dd>
+        <dt>E-mail</dt><dd>${esc(r.email)||'—'}</dd>
+        <dt>Nascimento</dt><dd>${r.nascimento?fdata(r.nascimento):'—'}</dd>
+        <dt>Endereço</dt><dd>${esc(r.endereco || a.endereco)||'—'}</dd>
+        <dt>CPF</dt><dd>${esc(fmtDoc(a.cpf))||'—'}</dd>
+        <dt>Pagamento</dt><dd>${esc(r.forma_pagamento)||'—'}</dd>
+        <dt>Renovou em</dt><dd>${fdata(r.criado_em)}</dd>
+        ${r.obs?`<dt>Obs.</dt><dd>${esc(r.obs)}</dd>`:''}
+      </dl></div>`; };
+  abrirSheet(`<h3>Renovados ${ANO_RENOV}</h3><p class="muted">${lst.length} afiliado${lst.length!==1?'s':''}, em ordem alfabética, com os dados que eles mesmos atualizaram.</p>
+    ${lst.length ? `<input class="search" style="margin-top:10px" placeholder="Buscar pelo nome" oninput="const q=norm(this.value);document.querySelectorAll('#renLista>.card').forEach(c=>c.classList.toggle('hide',!!q&&!norm(c.textContent).includes(q)))">
+      <button class="btn ghost wide" style="margin-top:10px" onclick="exportarRenovados()">Baixar planilha dos renovados</button>
+      <div id="renLista">${lst.map(item).join('')}</div>` : '<div class="card empty" style="margin-top:10px">Ninguém renovou ainda.</div>'}
+    <button class="btn ghost wide" style="margin-top:14px" onclick="fecharSheet()">Fechar</button>`);
+}
+async function exportarRenovados(){
+  try {
+    if (!window.XLSX) await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
+    const rows = S.renovacoes.filter(r => r.ano === ANO_RENOV).map(r => { const a = S.afiliados.find(x => x.id === r.afiliado_id) || {};
+      return { Nome: r.nome || a.nome, Telefone: fmtTel(r.telefone || a.telefone), 'E-mail': r.email || '', Nascimento: r.nascimento ? fdata(r.nascimento) : '',
+        Endereço: r.endereco || a.endereco || '', CPF: fmtDoc(a.cpf), Pagamento: r.forma_pagamento || '', 'Renovou em': fdata(r.criado_em), Obs: r.obs || '' }; })
+      .sort((x,y) => (x.Nome||'').localeCompare(y.Nome||'', 'pt-BR'));
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Renovados ' + ANO_RENOV);
+    XLSX.writeFile(wb, `renovados-${ANO_RENOV}.xlsx`);
+  } catch(e){ toast(erroMsg(e)); }
 }
 async function copiarRenov(id){
   const a = S.afiliados.find(x=>x.id===id); const link = linkRenov(a);
@@ -472,6 +524,7 @@ async function sair(){ if (DEMO) LS.set('masto_demo_on', false); else await sb.a
 const ABAS = [
   ['inicio','Início',IC.home], ['afiliados','Afiliados',IC.users], ['financeiro','Financeiro',IC.money],
   ['eventos','Eventos',IC.cal], ['importar','Importar',IC.up] ];
+const abasDoPerfil = () => ehAdm() || DEMO ? ABAS : ABAS.filter(([k]) => k === 'financeiro');
 async function abrirApp(){
   document.body.classList.toggle('priv', S.priv);
   $('#app').innerHTML = `
@@ -482,14 +535,16 @@ async function abrirApp(){
       <button class="iconbtn" title="Configurações" aria-label="Configurações" onclick="abrirConfig()">${IC.gear}</button>
     </header>
     ${DEMO ? '<div class="demo">Modo demonstração — os dados ficam só neste aparelho</div>' : ''}
+    ${!DEMO && ehFin() ? '<div class="demo" style="background:var(--accent-soft);color:var(--accent)">Acesso financeiro: pagamentos e saídas</div>' : ''}
     <main id="view"><div class="empty"><span class="spin"></span></div></main>
-    <nav class="tabs">${ABAS.map(([k,n,i])=>`<button data-k="${k}" onclick="ir('${k}')">${i}<span>${n}</span></button>`).join('')}</nav>
+    <nav class="tabs">${abasDoPerfil().map(([k,n,i])=>`<button data-k="${k}" onclick="ir('${k}')">${i}<span>${n}</span></button>`).join('')}</nav>
     <div id="fabRoot"></div>`;
   try { await carregar(); } catch(e){ $('#view').innerHTML = `<div class="card"><b>Erro ao carregar dados</b><p class="muted">${esc(erroMsg(e))}</p><button class="btn" onclick="abrirApp()">Tentar de novo</button></div>`; return; }
   ir(S.tab);
 }
 function togglePriv(){ S.priv=!S.priv; LS.set('masto_priv',S.priv); document.body.classList.toggle('priv', S.priv); }
 function ir(k){
+  if (!abasDoPerfil().some(([x]) => x === k)) k = abasDoPerfil()[0][0];
   S.tab = k; LS.set('masto_tab', k);
   document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.toggle('on', b.dataset.k===k));
   $('#fabRoot').innerHTML = '';
@@ -543,7 +598,8 @@ function vInicio(){
     <div class="list">${pend.slice(0,30).map(({a,s})=>linhaAf(a,s,true)).join('')}</div>
     ${pend.length>30?`<button class="btn ghost wide" style="margin-top:8px" onclick="S.filtroAf='pendente';ir('afiliados')">Ver todos (${pend.length})</button>`:''}` : ''}
   ${vence.length ? `<div class="sec-h"><h2>Vencendo nos próximos dias</h2></div><div class="list">${vence.map(({a,s})=>linhaAf(a,s,true)).join('')}</div>` : ''}
-  ${ativos.length ? (()=>{ const nr = ativos.filter(a=>renovou(a)).length; return `<div class="card" style="margin-top:14px"><div class="row"><div class="grow"><b>Renovação ${ANO_RENOV}</b><div class="muted">${nr} de ${ativos.length} afiliados já renovaram</div></div><button class="btn sm ghost" onclick="S.filtroAf='nren';ir('afiliados')">Ver quem falta</button></div>
+  ${ativos.length ? (()=>{ const nr = ativos.filter(a=>renovou(a)).length; return `<div class="card" style="margin-top:14px"><div class="row"><div class="grow"><b>Renovação ${ANO_RENOV}</b><div class="muted">${nr} de ${ativos.length} afiliados já renovaram</div></div></div>
+    <div class="row" style="margin-top:10px"><button class="btn sm acc grow" onclick="abrirRenovados()">Ver renovados (${nr})</button><button class="btn sm ghost grow" onclick="S.filtroAf='nren';ir('afiliados')">Ver quem falta</button></div>
     <div class="bars" style="margin-top:10px"><div class="bt"><div class="bf" style="width:${(nr/ativos.length*100).toFixed(1)}%;background:var(--ok)"></div></div></div></div>`; })() : ''}
   ${naoId ? `<div class="card" style="margin-top:14px"><b>${naoId} boleto${naoId>1?'s':''} sem identificação</b><p class="muted" style="margin:4px 0 10px">O extrato do banco junta os boletos do dia sem dizer de quem é. Abra o boleto e toque em “Dar baixa em afiliados” para distribuir.</p><button class="btn sm ghost" onclick="S.tipoFin='naoid';ir('financeiro')">Ver boletos</button></div>` : ''}
   `;
@@ -706,7 +762,9 @@ function vFinanceiro(){
   const ent = doMes.filter(m=>m.valor>0), sai = doMes.filter(m=>m.valor<0);
   const tE = ent.reduce((s,m)=>s+m.valor,0), tS = sai.reduce((s,m)=>s-m.valor,0);
   const naoid = S.movimentos.filter(m=>m.valor>0 && !m.afiliado_id && (mes==='tudo'||m.data.startsWith(mes)) && m.categoria==='Boletos (sem identificação)');
-  const lst = S.tipoFin==='entrada' ? ent : S.tipoFin==='naoid' ? naoid : sai;
+  const semComp = sai.filter(m => !m.comprovante);
+  let lst = S.tipoFin==='entrada' ? ent : S.tipoFin==='naoid' ? naoid : sai;
+  if (S.tipoFin==='saida' && S.soSemComp) lst = semComp;
   const porCat = {}; lst.forEach(m=>{ const c=m.categoria||'Sem categoria'; porCat[c]=(porCat[c]||0)+Math.abs(m.valor); });
   const cats = Object.entries(porCat).sort((a,b)=>b[1]-a[1]); const mx = cats[0]?.[1]||1;
   const meses = [...new Set(S.movimentos.map(m=>m.data.slice(0,7)).concat(hojeISO().slice(0,7)))].sort().reverse();
@@ -727,6 +785,10 @@ function vFinanceiro(){
       <button class="${S.tipoFin==='naoid'?'on':''}" onclick="S.tipoFin='naoid';vFinanceiro()">Boletos s/ dono${naoid.length?` (${naoid.length})`:''}</button>
     </div>
     ${cats.length && S.tipoFin!=='naoid' ? `<div class="card bars" style="margin-top:12px">${cats.map(([c,v])=>`<div class="b"><div class="bl"><span>${esc(c)}</span><b class="val">${brl(v)}</b></div><div class="bt"><div class="bf" style="width:${(v/mx*100).toFixed(1)}%;${S.tipoFin==='saida'?'background:var(--bad)':'background:var(--ok)'}"></div></div></div>`).join('')}</div>` : ''}
+    ${S.tipoFin==='saida' && sai.length ? `<div class="card" style="margin-top:12px;${semComp.length?'background:var(--warn-soft);border:0':'background:var(--ok-soft);border:0'}">
+      <div class="row"><div class="grow"><b>${semComp.length ? `${semComp.length} de ${sai.length} saídas sem comprovante` : 'Todas as saídas têm comprovante ✔'}</b>
+      <div class="muted">Toque numa saída para anexar a foto da nota e escrever para que foi.</div></div>
+      ${semComp.length ? `<button class="btn sm ${S.soSemComp?'acc':'ghost'}" onclick="S.soSemComp=!S.soSemComp;vFinanceiro()">${S.soSemComp?'Ver todas':'Só sem comprovante'}</button>` : ''}</div></div>` : ''}
     ${S.tipoFin==='naoid' ? `<p class="muted" style="margin:12px 2px 0">O banco junta os boletos do dia numa linha só. Toque num boleto e distribua entre os afiliados que pagaram (o relatório de cobrança do banco mostra quem foi).</p>` : ''}
     <div style="margin-top:12px">${lst.length ? `<div class="list">${lst.sort((a,b)=>b.data.localeCompare(a.data)||b.id-a.id).map(linhaMov).join('')}</div>` : '<div class="card empty">Nada nesse período.</div>'}</div>`;
   fab('formMov()');
@@ -735,8 +797,8 @@ function linhaMov(m){
   const af = m.afiliado_id && S.afiliados.find(a=>a.id===m.afiliado_id);
   const ev = m.evento_id && S.eventos.find(e=>e.id===m.evento_id);
   return `<div class="li" onclick="formMov(${m.id})"><div class="grow">
-    <div class="t">${esc(af ? af.nome : (m.nome || m.descricao))}</div>
-    <div class="s">${fdata(m.data)} · ${esc(af ? 'Mensalidade' : m.categoria || '—')}${ev?' · '+esc(ev.nome):''}${m.nome?' · '+esc(m.descricao):''}</div></div>
+    <div class="t">${m.comprovante?'📎 ':''}${esc(af ? af.nome : (m.nome || m.descricao))}</div>
+    <div class="s">${fdata(m.data)} · ${esc(af ? 'Mensalidade' : m.categoria || '—')}${ev?' · '+esc(ev.nome):''}${m.obs?' · '+esc(m.obs):(m.nome?' · '+esc(m.descricao):'')}</div></div>
     <div class="v val ${m.valor>0?'pos':'neg'}">${brl(m.valor)}</div></div>`;
 }
 function formMov(id, pre={}){
@@ -756,6 +818,10 @@ function formMov(id, pre={}){
     <label>Categoria</label><select name="categoria" id="mCat"></select>
     <div id="mAfBox"><label>Mensalidade de (afiliado)</label><select name="afiliado_id"><option value="">— nenhum —</option>${opsAf.map(a=>`<option value="${a.id}" ${a.id===m.afiliado_id?'selected':''}>${esc(a.nome)}</option>`).join('')}</select></div>
     <label>Evento</label><select name="evento_id"><option value="">— nenhum —</option>${S.eventos.map(e=>`<option value="${e.id}" ${e.id===m.evento_id?'selected':''}>${esc(e.nome)}${e.data?' ('+fdata(e.data)+')':''}</option>`).join('')}</select>
+    <label>Detalhes (para que foi, quem recebeu)</label><textarea name="obs" placeholder="Ex.: carne e carvão para o churrasco do dia 12">${esc(m.obs)}</textarea>
+    <label>Comprovante (foto da nota ou PDF)</label>
+    <div id="cpBox">${m.comprovante ? '<div class="muted"><span class="spin"></span> Carregando comprovante…</div>' : '<div class="muted">Nenhum comprovante anexado.</div>'}</div>
+    <input type="file" name="arq" accept="image/*,application/pdf" style="margin-top:8px">
     <div class="err" id="mErr"></div>
     ${id && m.valor>0 && !m.afiliado_id ? `<button type="button" class="btn ghost wide" style="margin-top:8px" onclick="distribuir(${id})">Dar baixa em afiliados (dividir valor)</button>`:''}
     <div class="row" style="margin-top:8px">
@@ -768,17 +834,54 @@ function formMov(id, pre={}){
     $('#mAfBox').classList.toggle('hide', t!=='entrada'); };
   $('#segT').querySelectorAll('button').forEach(b=>b.onclick=()=>setTipo(b.dataset.t));
   setTipo(tipo);
+  if (id && m.comprovante) mostrarComprovante(m, $('#cpBox'));
   $('#fMov [name=afiliado_id]').onchange = e => { if (e.target.value) $('#mCat').value = 'Mensalidade'; };
   $('#fMov').addEventListener('submit', async ev => {
     ev.preventDefault(); const f = new FormData(ev.target); const t = f.get('tipo');
     const v = Math.abs(parseFloat(String(f.get('valor')).replace(/\./g,'').replace(',','.')));
     if (!(v>0)) return $('#mErr').textContent='Valor inválido.';
     const afId = t==='entrada' && f.get('afiliado_id') ? +f.get('afiliado_id') : null;
-    const row = { categoria: afId ? 'Mensalidade' : f.get('categoria'), afiliado_id: afId, evento_id: f.get('evento_id') ? +f.get('evento_id') : null };
+    const row = { categoria: afId ? 'Mensalidade' : f.get('categoria'), afiliado_id: afId, evento_id: f.get('evento_id') ? +f.get('evento_id') : null,
+      obs: (f.get('obs')||'').trim() || null };
     if (m.origem!=='extrato') Object.assign(row, { data: f.get('data'), valor: t==='entrada'? v : -v, descricao: f.get('descricao').trim() });
-    try { if (id) await DB.upd('movimentos',{id},row); else await DB.ins('movimentos',{...row, origem:'manual'});
-      await carregar('movimentos'); fecharSheet(); toast('Salvo'); render(); } catch(e){ $('#mErr').textContent=erroMsg(e); }
+    const arq = ev.target.querySelector('[name=arq]').files[0];
+    const btn = ev.target.querySelector('button.acc'); btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Salvando…';
+    try { let mid = id;
+      if (id) await DB.upd('movimentos',{id},row); else mid = (await DB.ins('movimentos',{...row, origem:'manual'}))[0]?.id;
+      if (arq && mid) await enviarComprovante(mid, arq);
+      await carregar('movimentos'); fecharSheet(); toast(arq ? 'Salvo com comprovante' : 'Salvo'); render();
+    } catch(e){ $('#mErr').textContent=erroMsg(e); btn.disabled = false; btn.textContent = 'Salvar'; }
   });
+}
+/* ---------- comprovantes ---------- */
+function reduzirImagem(file){
+  return new Promise(ok => { const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => { const k = Math.min(1, 1600 / Math.max(img.width, img.height)); const c = document.createElement('canvas');
+      c.width = Math.round(img.width*k); c.height = Math.round(img.height*k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      c.toBlob(b => { URL.revokeObjectURL(url); ok(b || file); }, 'image/jpeg', 0.82); };
+    img.onerror = () => { URL.revokeObjectURL(url); ok(file); }; img.src = url; });
+}
+async function enviarComprovante(movId, file){
+  if (DEMO) return toast('No modo demonstração os comprovantes não são guardados.');
+  let body = file, tipo = file.type || 'application/octet-stream', ext = (file.name.split('.').pop() || 'bin').toLowerCase();
+  if (/^image\//.test(tipo) && !/gif/.test(tipo)) { body = await reduzirImagem(file); tipo = 'image/jpeg'; ext = 'jpg'; }
+  if (body.size > 10*1024*1024) throw new Error('O arquivo passa de 10 MB. Tire uma foto em vez de enviar o arquivo original.');
+  const path = `${movId}/${Date.now()}.${ext}`;
+  const { error } = await sb.storage.from('comprovantes').upload(path, body, { contentType: tipo });
+  if (error) throw error;
+  await DB.upd('movimentos', {id: movId}, {comprovante: path});
+}
+async function linkComprovante(m){
+  const { data, error } = await sb.storage.from('comprovantes').createSignedUrl(m.comprovante, 3600);
+  if (error) throw error; return data.signedUrl;
+}
+async function mostrarComprovante(m, box){
+  try { const url = await linkComprovante(m); if (!box.isConnected) return;
+    box.innerHTML = /\.pdf$/i.test(m.comprovante)
+      ? `<a class="btn ghost wide" style="text-decoration:none" href="${url}" target="_blank" rel="noopener">📄 Abrir comprovante (PDF)</a>`
+      : `<a href="${url}" target="_blank" rel="noopener"><img src="${url}" alt="Comprovante" style="width:100%;max-height:320px;object-fit:contain;border-radius:12px;border:1px solid var(--line);background:var(--bg)"></a>
+         <div class="muted" style="margin-top:4px">Toque na imagem para ver em tamanho real. Para trocar, escolha outro arquivo abaixo.</div>`;
+  } catch(e){ box.innerHTML = `<div class="muted">Não foi possível abrir o comprovante agora.</div>`; }
 }
 async function excluirMov(id){
   const m = S.movimentos.find(x=>x.id===id);
@@ -1098,18 +1201,18 @@ async function confirmarImp(){
 function abrirConfig(){
   const adm = S.me.papel === 'adm';
   abrirSheet(`<h3>Configurações</h3>
-    <dl class="kv"><dt>Usuário</dt><dd>${esc(S.me.nome)}</dd><dt>E-mail</dt><dd>${esc(S.me.email)}</dd><dt>Perfil</dt><dd>${S.me.papel==='adm'?'Administrador':'Membro'}</dd></dl>
+    <dl class="kv"><dt>Usuário</dt><dd>${esc(S.me.nome)}</dd><dt>E-mail</dt><dd>${esc(S.me.email)}</dd><dt>Perfil</dt><dd>${S.me.papel==='adm'?'Administrador':'Financeiro'}</dd></dl>
     ${adm ? `<div class="sec-h"><h2 style="font-size:18px">Quem pode acessar</h2></div>
       <div class="list">${S.usuarios.map(u=>`<div class="li" style="cursor:default"><div class="grow"><div class="t">${esc(u.nome)}</div><div class="s">${esc(u.email)}</div></div>
-        <span class="badge ${u.papel==='adm'?'b-acc':'b-mute'}">${u.papel==='adm'?'adm':'membro'}</span>
+        <span class="badge ${u.papel==='adm'?'b-acc':'b-mute'}">${u.papel==='adm'?'adm':'financeiro'}</span>
         ${u.email!==S.me.email?`<button class="btn sm ${u.ativo?'ghost':'danger'}" onclick="uTog('${esc(u.email)}',${!u.ativo})">${u.ativo?'Bloquear':'Liberar'}</button>`:''}</div>`).join('')}</div>
       <form class="f" id="fU"><label>Liberar novo acesso</label>
         <input name="nome" placeholder="Nome" required><div class="g2" style="margin-top:8px"><input name="email" type="email" placeholder="E-mail" required>
-        <select name="papel"><option value="membro">Membro</option><option value="adm">Administrador</option></select></div>
+        <select name="papel"><option value="financeiro">Financeiro (só pagamentos e saídas, sem CPF)</option><option value="adm">Administrador (tudo)</option></select></div>
         <button class="btn acc wide" style="margin-top:10px">Liberar acesso</button>
         <p class="muted">Depois a pessoa abre o app, toca em <b>Primeiro acesso</b> e cria a senha com esse e-mail.</p></form>` : ''}
-    <div class="sec-h"><h2 style="font-size:18px">Dados</h2></div>
-    <button class="btn ghost wide" onclick="exportar()">Baixar planilha (afiliados + financeiro)</button>
+    ${adm ? `<div class="sec-h"><h2 style="font-size:18px">Dados</h2></div>
+    <button class="btn ghost wide" onclick="exportar()">Baixar planilha (afiliados + financeiro)</button>` : ''}
     <button class="btn danger wide" style="margin-top:10px" onclick="sair()">${IC.out} Sair</button>
     <p class="muted" style="text-align:center;margin-top:14px">Mastodonte Gestão ${VERSAO}${DEMO?' · demonstração':''}</p>`);
   $('#fU')?.addEventListener('submit', async ev => { ev.preventDefault(); const f=new FormData(ev.target);
