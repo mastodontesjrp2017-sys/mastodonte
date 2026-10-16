@@ -197,7 +197,7 @@ nav.tabs button.on{color:var(--accent)}
    Vazio = MODO DEMONSTRAÇÃO (dados ficam só no aparelho).
    ===================================================================== */
 const CFG = { url: 'https://cknzysljezvpazonvibb.supabase.co', key: 'sb_publishable_ji48PdmWNR5nvQkXMhbbCQ_DEekbpVL' };
-const VERSAO = 'v10';
+const VERSAO = 'v11';
 const DEMO = !CFG.url || !CFG.key;
 const sb = DEMO ? null : supabase.createClient(CFG.url, CFG.key);
 
@@ -205,7 +205,7 @@ const sb = DEMO ? null : supabase.createClient(CFG.url, CFG.key);
 const MENSALIDADE_PADRAO = 40;   // R$ por mês
 const DIA_VENC_PADRAO = 20;      // dia do vencimento
 const PIX_CHAVE = '55821595000138';   // chave PIX (CNPJ) da Associação Mastodonte
-const TAMANHOS = ['PP','P','M','G','GG','XG','XGG'];
+const TAMANHOS = ['PP','P','M','G','GG','XG','XGG','G1','G2','G3'];
 const selCamisa = (nome, atual) => `<select name="${nome}"><option value="">— não informado —</option>${TAMANHOS.map(t=>`<option ${t===atual?'selected':''}>${t}</option>`).join('')}</select>`;
 const LIMITE_CONTRIB = 250;      // Art. 9º do estatuto: máximo de sócios contribuintes (pode ser aumentado em assembleia)
 const MESES_ATRASO = 3;          // a partir de quantos meses sem pagar conta como "em atraso"

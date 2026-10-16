@@ -270,7 +270,7 @@ function form(d){
       <label for="end">Endereço</label>
       <input id="end" name="end" autocomplete="street-address" placeholder="Rua, número, bairro, cidade" value="${esc(d.endereco)}">
       <label for="camisa">Tamanho da camisa</label>
-      <select id="camisa" name="camisa"><option value="">Escolha o tamanho</option>${['PP','P','M','G','GG','XG','XGG'].map(t=>`<option ${t===d.tamanho_camisa?'selected':''}>${t}</option>`).join('')}</select>
+      <select id="camisa" name="camisa"><option value="">Escolha o tamanho</option>${['PP','P','M','G','GG','XG','XGG','G1','G2','G3'].map(t=>`<option ${t===d.tamanho_camisa?'selected':''}>${t}</option>`).join('')}</select>
       <div class="card" style="margin-top:16px;padding:12px 14px;background:var(--bg);box-shadow:none">
         <b>Pagamento por PIX</b>
         <p class="muted" style="margin-top:4px">A partir de ${ANO}, as mensalidades serão pagas por PIX. Faça o PIX da sua própria conta, com o seu CPF, para o pagamento ser identificado automaticamente.</p>
