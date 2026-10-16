@@ -61,6 +61,9 @@ button:disabled{opacity:.55}
 .anos{display:flex;gap:6px;margin-bottom:10px}.anos button{width:auto;margin:0;padding:8px 14px;font-size:14px;border-radius:999px;background:var(--card);color:var(--ink2);border:1px solid var(--line)}
 .anos button.on{background:var(--ink);color:var(--bg)}
 .pos{color:var(--ok)}.neg{color:var(--bad)}
+.pix{display:flex;align-items:center;gap:10px;margin-top:10px;padding:12px;border-radius:12px;background:var(--card);border:1px dashed var(--accent)}
+.pix div{flex:1;min-width:0}.pix small{display:block;color:var(--ink3);font-size:12.5px;font-weight:700}.pix b{font-size:17px;letter-spacing:.3px}
+.pix .cp{width:auto;margin:0;padding:10px 14px;font-size:14px;border-radius:10px;flex:none}
 .spin{display:inline-block;width:22px;height:22px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp 1s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.spin{animation:none}}
@@ -90,6 +93,16 @@ const dig = s => String(s ?? '').replace(/\D/g, '');
 const fmtTel = t => { t = dig(t); if (t.length===11) return t.replace(/(\d{2})(\d{5})(\d{4})/,'($1) $2-$3');
   if (t.length===10) return t.replace(/(\d{2})(\d{4})(\d{4})/,'($1) $2-$3'); return t; };
 const token = new URLSearchParams(location.search).get('t');
+const ANO = 2027;
+const PIX_CHAVE = '55821595000138', PIX_TXT = '55.821.595/0001-38';
+// bloco com a chave PIX e botão de copiar
+const blocoPix = () => `<div class="pix"><div><small>Chave PIX (CNPJ) · Associação Mastodonte</small><b>${PIX_TXT}</b></div>
+  <button type="button" class="cp" onclick="copiarPix(this)">Copiar chave</button></div>`;
+async function copiarPix(btn){
+  try { await navigator.clipboard.writeText(PIX_CHAVE); }
+  catch(e){ const t = document.createElement('textarea'); t.value = PIX_CHAVE; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); }
+  btn.textContent = 'Copiada ✓'; setTimeout(() => btn.textContent = 'Copiar chave', 2500);
+}
 
 const brl = v => (Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const fdata = iso => { const [y,m,d] = String(iso).slice(0,10).split('-'); return `${d}/${m}/${y}`; };
@@ -121,6 +134,7 @@ function mostrarSituacao(d){
         ${s.prox ? `<dt>Próxima</dt><dd>${s.prox}</dd>` : ''}
         <dt>Total pago</dt><dd>${brl(s.pago)}</dd>
         <dt>Categoria</dt><dd>${d.categoria==='fundador'?'Sócio fundador':'Sócio contribuinte'}</dd></dl>
+      ${s.deve ? `<p class="muted" style="margin-top:12px">Para pagar, faça um PIX de <b>${brl(s.deve)}</b> da sua própria conta:</p>${blocoPix()}` : `<p class="muted" style="margin-top:12px">Pague sua mensalidade por PIX, da sua própria conta:</p>${blocoPix()}`}
       ${s.deve ? `<p class="muted" style="margin-top:12px">Se você já pagou e ainda aparece aqui, pode ser que o pagamento não tenha sido identificado. Fale com a associação.</p>` : ''}
     </div>
     <h2 class="sec">Pagamentos</h2>
@@ -223,8 +237,11 @@ function form(d){
       <input id="nasc" name="nasc" type="date" value="${esc(d.nascimento||'')}">
       <label for="end">Endereço</label>
       <input id="end" name="end" autocomplete="street-address" placeholder="Rua, número, bairro, cidade" value="${esc(d.endereco)}">
-      <label for="forma">Como prefere pagar a mensalidade?</label>
-      <select id="forma" name="forma"><option>Boleto</option><option>PIX</option></select>
+      <div class="card" style="margin-top:16px;padding:12px 14px;background:var(--bg);box-shadow:none">
+        <b>Pagamento por PIX</b>
+        <p class="muted" style="margin-top:4px">A partir de ${ANO}, as mensalidades serão pagas por PIX. Faça o PIX da sua própria conta, com o seu CPF, para o pagamento ser identificado automaticamente.</p>
+        ${blocoPix()}
+      </div>
       <label for="obs">Observações (opcional)</label>
       <textarea id="obs" name="obs"></textarea>
       <label class="check"><input type="checkbox" id="ok" required> Quero continuar associado à Mastodonte em 2027</label>
@@ -245,7 +262,7 @@ async function enviar(ev){
   btn.disabled = true; btn.textContent = 'Enviando…';
   const { error } = await sb.rpc('renovacao_enviar', { p_token: token, p_nome: f.get('nome').trim(), p_telefone: tel,
     p_email: f.get('email').trim(), p_endereco: f.get('end').trim(), p_nascimento: f.get('nasc') || null,
-    p_forma: f.get('forma'), p_obs: f.get('obs').trim() });
+    p_forma: 'PIX', p_obs: f.get('obs').trim() });
   if (error){ btn.disabled = false; btn.textContent = 'Confirmar renovação';
     return err.textContent = 'Não foi possível enviar. Verifique sua internet e tente de novo.'; }
   box.innerHTML = `<div class="done"><div class="ic">✓</div><h2>Renovação confirmada!</h2>

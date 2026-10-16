@@ -204,6 +204,7 @@ const sb = DEMO ? null : supabase.createClient(CFG.url, CFG.key);
 /* Regras da associação */
 const MENSALIDADE_PADRAO = 40;   // R$ por mês
 const DIA_VENC_PADRAO = 20;      // dia do vencimento
+const PIX_CHAVE = '55821595000138';   // chave PIX (CNPJ) da Associação Mastodonte
 const LIMITE_CONTRIB = 250;      // Art. 9º do estatuto: máximo de sócios contribuintes (pode ser aumentado em assembleia)
 const MESES_ATRASO = 3;          // a partir de quantos meses sem pagar conta como "em atraso"
 
@@ -386,7 +387,7 @@ function waLink(a, st){
   let tel = dig(a.telefone); if (!tel) return null; if (tel.length <= 11) tel = '55' + tel;
   const nome = (a.nome||'').split(' ')[0];
   const msg = temDivida(st)
-    ? `Olá ${nome}, tudo bem? Aqui é da Associação Mastodonte. Consta em aberto ${st.meses} mensalidade${st.meses>1?'s':''}, total de ${brl(st.deve)}. Se já pagou, desconsidere. Obrigado pelo apoio! 🦣`
+    ? `Olá ${nome}, tudo bem? Aqui é da Associação Mastodonte. Consta em aberto ${st.meses} mensalidade${st.meses>1?'s':''}, total de ${brl(st.deve)}. Para pagar, faça um PIX da sua própria conta para a chave (CNPJ) ${PIX_CHAVE}. Se já pagou, desconsidere. Obrigado pelo apoio! 🦣`
     : `Olá ${nome}, tudo bem? Aqui é da Associação Mastodonte.`;
   return `https://wa.me/${tel}?text=${encodeURIComponent(msg)}`;
 }
