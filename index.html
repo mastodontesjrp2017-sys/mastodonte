@@ -16,28 +16,28 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
 :root{
-  --bg:#f3efe6; --card:#fffdf8; --ink:#161513; --ink2:#5d5850; --ink3:#8d877c; --line:#e3ddd0;
+  --bg:#f3efe6; --card:#fffdf8; --ink:#161513; --ink2:#4f4a43; --ink3:#6e685d; --line:#e3ddd0;
   --brand:#141414; --brand-ink:#f0eadc; --accent:#b8742a; --accent-soft:#f3e4cf;
-  --ok:#2f7a4c; --ok-soft:#e1f0e5; --warn:#a87a06; --warn-soft:#f8edc8; --bad:#b8352a; --bad-soft:#f8dfdb;
+  --ok:#2f7a4c; --ok-soft:#e1f0e5; --warn:#9a6f00; --warn-soft:#f8edc8; --bad:#b8352a; --bad-soft:#f8dfdb;
   --mute-soft:#ebe7de; --shadow:0 1px 2px rgba(20,18,14,.06),0 4px 14px rgba(20,18,14,.06);
   --r:14px; --slab:"Zilla Slab",Georgia,serif;
   --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#121110; --card:#1c1b19; --ink:#efeae0; --ink2:#bdb6a8; --ink3:#8a8478; --line:#2e2c28;
+  --bg:#121110; --card:#1c1b19; --ink:#efeae0; --ink2:#c9c2b4; --ink3:#a39c8f; --line:#2e2c28;
   --brand:#0a0a0a; --brand-ink:#f0eadc; --accent:#d8964b; --accent-soft:#3a2b1a;
   --ok:#5cbf83; --ok-soft:#173222; --warn:#e2b53c; --warn-soft:#3a3013; --bad:#ec6f62; --bad-soft:#3d1b17;
   --mute-soft:#26241f; --shadow:0 1px 2px rgba(0,0,0,.4);
 }}
 :root[data-theme="dark"]{
-  --bg:#121110; --card:#1c1b19; --ink:#efeae0; --ink2:#bdb6a8; --ink3:#8a8478; --line:#2e2c28;
+  --bg:#121110; --card:#1c1b19; --ink:#efeae0; --ink2:#c9c2b4; --ink3:#a39c8f; --line:#2e2c28;
   --brand:#0a0a0a; --brand-ink:#f0eadc; --accent:#d8964b; --accent-soft:#3a2b1a;
   --ok:#5cbf83; --ok-soft:#173222; --warn:#e2b53c; --warn-soft:#3a3013; --bad:#ec6f62; --bad-soft:#3d1b17;
   --mute-soft:#26241f; --shadow:0 1px 2px rgba(0,0,0,.4);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 var(--sans)}
-body{min-height:100vh;padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 var(--sans)}
+body{min-height:100vh;padding-bottom:calc(84px + env(safe-area-inset-bottom))}
 button,input,select,textarea{font:inherit;color:inherit}
 h1,h2,h3{font-family:var(--slab);margin:0;letter-spacing:.2px}
 .hide{display:none!important}
@@ -46,19 +46,19 @@ h1,h2,h3{font-family:var(--slab);margin:0;letter-spacing:.2px}
   padding:calc(10px + env(safe-area-inset-top)) 16px 10px;display:flex;align-items:center;gap:10px}
 .top img{height:30px}
 .top .tt{flex:1;min-width:0}
-.top .tt b{font-family:var(--slab);font-size:18px;letter-spacing:1px;display:block;line-height:1}
-.top .tt small{opacity:.65;font-size:12px}
-.iconbtn{background:transparent;border:0;color:inherit;width:38px;height:38px;border-radius:10px;display:grid;place-items:center;cursor:pointer}
+.top .tt b{font-family:var(--slab);font-size:19px;letter-spacing:1px;display:block;line-height:1}
+.top .tt small{opacity:.75;font-size:13.5px}
+.iconbtn{background:transparent;border:0;color:inherit;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;cursor:pointer}
 .iconbtn:active{background:rgba(255,255,255,.12)}
-.iconbtn svg{width:22px;height:22px}
-.demo{background:var(--warn-soft);color:var(--warn);font-size:12.5px;padding:7px 16px;text-align:center;font-weight:600}
+.iconbtn svg{width:24px;height:24px}
+.demo{background:var(--warn-soft);color:var(--warn);font-size:13.5px;padding:7px 16px;text-align:center;font-weight:600}
 main{max-width:860px;margin:0 auto;padding:14px 16px}
 /* ---------- nav ---------- */
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--card);border-top:1px solid var(--line);
   display:flex;justify-content:space-around;padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
-nav.tabs button{flex:1;background:none;border:0;display:flex;flex-direction:column;align-items:center;gap:2px;
-  font-size:11px;color:var(--ink3);padding:4px 0;cursor:pointer;font-weight:600}
-nav.tabs button svg{width:24px;height:24px}
+nav.tabs button{flex:1;background:none;border:0;display:flex;flex-direction:column;align-items:center;gap:3px;
+  font-size:12.5px;color:var(--ink3);padding:6px 0;cursor:pointer;font-weight:700}
+nav.tabs button svg{width:26px;height:26px}
 nav.tabs button.on{color:var(--accent)}
 /* ---------- elementos ---------- */
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:14px}
@@ -68,63 +68,71 @@ nav.tabs button.on{color:var(--accent)}
 .kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 @media(min-width:640px){.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .kpi{padding:12px 14px}
-.kpi small{display:block;color:var(--ink2);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
-.kpi b{display:block;font-family:var(--slab);font-size:22px;margin-top:4px;font-variant-numeric:tabular-nums}
+.kpi small{display:block;color:var(--ink2);font-size:13px;font-weight:700}
+.kpi b{display:block;font-family:var(--slab);font-size:24px;margin-top:4px;font-variant-numeric:tabular-nums}
 .kpi.bad{background:var(--bad-soft);border-color:transparent}.kpi.bad b{color:var(--bad)}
+.kpi.warn{background:var(--warn-soft);border-color:transparent}.kpi.warn b{color:var(--warn)}
 .kpi.ok b{color:var(--ok)}
-.sec-h{display:flex;align-items:center;justify-content:space-between;margin:18px 2px 8px}
-.sec-h h2{font-size:19px}
-.btn{border:0;border-radius:11px;padding:11px 16px;font-weight:700;cursor:pointer;background:var(--brand);color:var(--brand-ink);display:inline-flex;align-items:center;gap:6px;justify-content:center}
+.sec-h{display:flex;align-items:center;justify-content:space-between;margin:20px 2px 8px}
+.sec-h h2{font-size:20px}
+.btn{border:0;border-radius:12px;padding:12px 16px;font-weight:700;cursor:pointer;background:var(--brand);color:var(--brand-ink);display:inline-flex;align-items:center;gap:6px;justify-content:center;min-height:46px}
 .btn.acc{background:var(--accent);color:#fff}
 .btn.ghost{background:var(--mute-soft);color:var(--ink)}
 .btn.danger{background:var(--bad-soft);color:var(--bad)}
-.btn.sm{padding:7px 11px;font-size:13px;border-radius:9px}
+.btn.bad{background:var(--bad);color:#fff}
+.btn.sm{padding:9px 13px;font-size:14px;border-radius:10px;min-height:40px}
 .btn.wide{width:100%}
 .btn:disabled{opacity:.5}
 .btn svg{width:18px;height:18px}
-.fab{position:fixed;right:16px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:25;width:56px;height:56px;border-radius:18px;
+.fab{position:fixed;right:16px;bottom:calc(92px + env(safe-area-inset-bottom));z-index:25;width:60px;height:60px;border-radius:18px;
   background:var(--accent);color:#fff;border:0;box-shadow:0 6px 18px rgba(0,0,0,.25);display:grid;place-items:center;cursor:pointer}
-.fab svg{width:28px;height:28px}
-.chips{display:flex;gap:6px;overflow-x:auto;padding:2px 0 4px;scrollbar-width:none}
-.chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;color:var(--ink2)}
+.fab svg{width:30px;height:30px}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 4px;scrollbar-width:none}
+.chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:9px 14px;font-size:14px;font-weight:700;white-space:nowrap;cursor:pointer;color:var(--ink2)}
 .chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .chip .n{opacity:.7;margin-left:4px}
-.search{width:100%;padding:11px 14px;border-radius:12px;border:1px solid var(--line);background:var(--card)}
+.search{width:100%;padding:13px 14px;border-radius:12px;border:1px solid var(--line);background:var(--card);font-size:16px}
+/* atalhos da tela inicial */
+.quick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.quick button{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:14px 6px;
+  display:flex;flex-direction:column;align-items:center;gap:6px;font-weight:700;font-size:14px;line-height:1.2;cursor:pointer;color:var(--ink);text-align:center}
+.quick button svg{width:28px;height:28px;color:var(--accent)}
+.quick button:active{background:var(--mute-soft)}
 /* lista */
 .list{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
-.li{display:flex;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid var(--line);cursor:pointer;position:relative}
+.li{display:flex;align-items:center;gap:12px;padding:14px;border-top:1px solid var(--line);cursor:pointer;position:relative}
 .li:first-child{border-top:0}
 .li:active{background:var(--mute-soft)}
-.li .t{font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.li .s{font-size:12.5px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.li .t{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.li .s{font-size:14px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .li .v{font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}
 .li.st-atraso{background:linear-gradient(90deg,var(--bad-soft),transparent 70%)}
-.li.st-atraso::before,.li.st-vence::before,.li.st-emdia::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px}
-.li.st-atraso::before{background:var(--bad)}.li.st-vence::before{background:var(--warn)}.li.st-emdia::before{background:var(--ok)}
+.li.st-atraso::before,.li.st-pendente::before,.li.st-vence::before,.li.st-emdia::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px}
+.li.st-atraso::before{background:var(--bad)}.li.st-pendente::before{background:var(--warn)}.li.st-vence::before{background:var(--warn)}.li.st-emdia::before{background:var(--ok)}
 .pos{color:var(--ok)}.neg{color:var(--bad)}
-.badge{display:inline-block;border-radius:999px;padding:3px 9px;font-size:11.5px;font-weight:700;white-space:nowrap}
-.b-atraso{background:var(--bad);color:#fff}.b-vence{background:var(--warn-soft);color:var(--warn)}
+.badge{display:inline-block;border-radius:999px;padding:4px 10px;font-size:13px;font-weight:700;white-space:nowrap}
+.b-atraso{background:var(--bad);color:#fff}.b-pend{background:var(--warn);color:#fff}.b-vence{background:var(--warn-soft);color:var(--warn)}
 .b-emdia{background:var(--ok-soft);color:var(--ok)}.b-mute{background:var(--mute-soft);color:var(--ink2)}
 .b-acc{background:var(--accent-soft);color:var(--accent)}
-.avatar{width:38px;height:38px;border-radius:12px;background:var(--mute-soft);display:grid;place-items:center;font-weight:800;font-size:14px;color:var(--ink2);flex:none}
+.avatar{width:42px;height:42px;border-radius:12px;background:var(--mute-soft);display:grid;place-items:center;font-weight:800;font-size:15px;color:var(--ink2);flex:none}
 .st-atraso .avatar{background:var(--bad);color:#fff}
 .empty{padding:28px 16px;text-align:center;color:var(--ink3)}
-.wa{width:36px;height:36px;border-radius:10px;background:#25d366;color:#fff;display:grid;place-items:center;flex:none;border:0;cursor:pointer;text-decoration:none}
-.wa svg{width:20px;height:20px}
+.wa{width:44px;height:44px;border-radius:12px;background:#25d366;color:#fff;display:grid;place-items:center;flex:none;border:0;cursor:pointer;text-decoration:none}
+.wa svg{width:22px;height:22px}
 /* barras */
-.bars .b{margin-top:10px}.bars .b:first-child{margin-top:0}
-.bars .bl{display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px}
-.bars .bt{height:8px;background:var(--mute-soft);border-radius:99px;overflow:hidden}
+.bars .b{margin-top:12px}.bars .b:first-child{margin-top:0}
+.bars .bl{display:flex;justify-content:space-between;font-size:14.5px;margin-bottom:5px}
+.bars .bt{height:9px;background:var(--mute-soft);border-radius:99px;overflow:hidden}
 .bars .bf{height:100%;background:var(--accent);border-radius:99px}
 /* formulário */
-.f label{display:block;font-size:12.5px;font-weight:700;color:var(--ink2);margin:12px 0 5px}
-.f input,.f select,.f textarea{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:var(--bg);font-size:16px}
+.f label{display:block;font-size:14px;font-weight:700;color:var(--ink2);margin:14px 0 6px}
+.f input,.f select,.f textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:11px;background:var(--bg);font-size:16px}
 .f textarea{min-height:70px;resize:vertical}
 .f .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.f .g2 label{margin-top:12px}
-.err{color:var(--bad);font-size:13px;margin-top:8px;min-height:1em}
-.seg{display:flex;background:var(--mute-soft);border-radius:11px;padding:3px}
-.seg button{flex:1;border:0;background:none;padding:8px;border-radius:9px;font-weight:700;color:var(--ink2);cursor:pointer}
+.f .g2 label{margin-top:14px}
+.err{color:var(--bad);font-size:14px;margin-top:8px;min-height:1em}
+.seg{display:flex;background:var(--mute-soft);border-radius:12px;padding:3px}
+.seg button{flex:1;border:0;background:none;padding:10px 6px;border-radius:10px;font-weight:700;color:var(--ink2);cursor:pointer;font-size:15px}
 .seg button.on{background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
 /* sheet */
 .ov{position:fixed;inset:0;background:rgba(10,9,8,.5);z-index:50;display:flex;align-items:flex-end;justify-content:center}
@@ -133,44 +141,50 @@ nav.tabs button.on{color:var(--accent)}
 @media(min-width:700px){.ov{align-items:center}.sheet{border-radius:20px}}
 @keyframes up{from{transform:translateY(30px);opacity:.4}to{transform:none;opacity:1}}
 .grab{width:40px;height:5px;background:var(--line);border-radius:9px;margin:4px auto 12px}
-.sheet h3{font-size:21px;margin-bottom:4px}
-.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:14px;margin-top:10px}
+.sheet h3{font-size:22px;margin-bottom:4px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:8px 14px;font-size:15px;margin-top:10px}
 .kv dt{color:var(--ink3)}.kv dd{margin:0;font-weight:600;word-break:break-word}
-.toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--bg);
-  padding:10px 16px;border-radius:12px;font-weight:600;z-index:80;max-width:90vw;text-align:center;font-size:14px}
+/* janela de confirmação */
+.ov.ov2{z-index:70;align-items:center;padding:20px}
+.dlg{background:var(--card);border-radius:18px;padding:20px;width:100%;max-width:400px;box-shadow:0 10px 30px rgba(0,0,0,.3);animation:up .15s ease-out}
+.dlg b{display:block;font-family:var(--slab);font-size:21px;margin-bottom:6px}
+.dlg p{margin:0 0 18px;font-size:16px;color:var(--ink2)}
+.toast{position:fixed;left:50%;bottom:calc(100px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--bg);
+  padding:12px 18px;border-radius:12px;font-weight:600;z-index:80;max-width:90vw;text-align:center;font-size:15px}
 /* login */
 .login{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 18px;background:var(--brand);color:var(--brand-ink)}
 .login img{width:min(260px,70vw);margin-bottom:22px}
 .login .card{width:100%;max-width:380px;color:var(--ink)}
-.login h1{font-size:22px;margin-bottom:2px}
-.login p{margin:0 0 6px;color:var(--ink2);font-size:13.5px}
-.lnk{background:none;border:0;color:var(--accent);font-weight:700;cursor:pointer;padding:6px 0;font-size:14px}
+.login h1{font-size:23px;margin-bottom:2px}
+.login p{margin:0 0 6px;color:var(--ink2);font-size:15px}
+.lnk{background:none;border:0;color:var(--accent);font-weight:700;cursor:pointer;padding:8px 0;font-size:15px}
 /* importador */
-.drop{border:2px dashed var(--line);border-radius:var(--r);padding:26px 16px;text-align:center;cursor:pointer;background:var(--card)}
-.drop b{display:block;font-family:var(--slab);font-size:18px;margin-bottom:4px}
-.drop small{color:var(--ink3)}
-.imp{display:grid;grid-template-columns:22px 1fr;gap:10px;padding:11px 12px;border-top:1px solid var(--line);align-items:start}
+.drop{display:block;border:2px dashed var(--line);border-radius:var(--r);padding:26px 16px;text-align:center;cursor:pointer;background:var(--card)}
+.drop b{display:block;font-family:var(--slab);font-size:20px;margin-bottom:4px}
+.drop small{display:block;color:var(--ink3);font-size:14px}
+.imp{display:grid;grid-template-columns:22px 1fr;gap:10px;padding:12px;border-top:1px solid var(--line);align-items:start}
 .imp:first-child{border-top:0}
-.imp input[type=checkbox]{width:20px;height:20px;margin:2px 0 0;accent-color:var(--accent)}
+.imp input[type=checkbox]{width:22px;height:22px;margin:2px 0 0;accent-color:var(--accent)}
 .imp .top2{display:flex;gap:8px;justify-content:space-between;align-items:baseline}
-.imp .d{font-size:12px;color:var(--ink3)}
-.imp select{width:100%;margin-top:6px;padding:7px 9px;border-radius:9px;border:1px solid var(--line);background:var(--bg);font-size:14px}
+.imp .d{font-size:13.5px;color:var(--ink3)}
+.imp select{width:100%;margin-top:6px;padding:9px;border-radius:9px;border:1px solid var(--line);background:var(--bg);font-size:15px}
 .imp.dup{opacity:.45}
 .imp.k-cpf{background:var(--ok-soft)}
 .imp.k-sug{background:var(--warn-soft)}
 .sug{margin-top:6px;display:flex;gap:6px;flex-wrap:wrap}
 .priv .val{filter:blur(7px)}
-.muted{color:var(--ink3);font-size:13px}
-.tag{font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;font-weight:700}
-.ev-date{width:52px;flex:none;text-align:center;border-radius:12px;background:var(--brand);color:var(--brand-ink);padding:6px 0}
-.ev-date b{display:block;font-family:var(--slab);font-size:22px;line-height:1}
-.ev-date small{font-size:11px;text-transform:uppercase;font-weight:700}
-.task{display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
+.muted{color:var(--ink3);font-size:14.5px}
+.tag{font-size:12px;color:var(--ink3);font-weight:700}
+.ev-date{width:54px;flex:none;text-align:center;border-radius:12px;background:var(--brand);color:var(--brand-ink);padding:6px 0}
+.ev-date b{display:block;font-family:var(--slab);font-size:23px;line-height:1}
+.ev-date small{font-size:12px;text-transform:uppercase;font-weight:700}
+.task{display:flex;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
 .task:first-child{border-top:0}
-.task input{width:20px;height:20px;accent-color:var(--ok)}
+.task input{width:22px;height:22px;accent-color:var(--ok)}
 .task.done .grow{text-decoration:line-through;color:var(--ink3)}
 .spin{display:inline-block;width:18px;height:18px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp 1s linear infinite;vertical-align:middle}
 @keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.sheet,.dlg{animation:none}}
 </style>
 </head>
 <body>
@@ -183,9 +197,14 @@ nav.tabs button.on{color:var(--accent)}
    Vazio = MODO DEMONSTRAÇÃO (dados ficam só no aparelho).
    ===================================================================== */
 const CFG = { url: 'https://cknzysljezvpazonvibb.supabase.co', key: 'sb_publishable_ji48PdmWNR5nvQkXMhbbCQ_DEekbpVL' };
-const VERSAO = 'v1';
+const VERSAO = 'v3';
 const DEMO = !CFG.url || !CFG.key;
 const sb = DEMO ? null : supabase.createClient(CFG.url, CFG.key);
+
+/* Regras da associação */
+const MENSALIDADE_PADRAO = 40;   // R$ por mês
+const DIA_VENC_PADRAO = 20;      // dia do vencimento
+const MESES_ATRASO = 3;          // a partir de quantos meses sem pagar conta como "em atraso"
 
 /* ---------------- utilidades ---------------- */
 const $ = s => document.querySelector(s);
@@ -196,17 +215,28 @@ const fdata = iso => { if (!iso) return ''; const [y,m,d] = iso.slice(0,10).spli
 const hojeISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
 const MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 const MESES_L = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
-const norm = s => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
+const norm = s => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
 const fmtDoc = d => { d = dig(d); if (d.length===11) return d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4');
   if (d.length===14) return d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,'$1.$2.$3/$4-$5'); return d; };
 const fmtTel = t => { t = dig(t); if (t.length===11) return t.replace(/(\d{2})(\d{5})(\d{4})/,'($1) $2-$3');
   if (t.length===10) return t.replace(/(\d{2})(\d{4})(\d{4})/,'($1) $2-$3'); return t; };
+const iniciais = n => (n||'?').split(' ').filter(Boolean).slice(0,2).map(x=>x[0]).join('');
 function cpfOk(c){ c=dig(c); if(c.length!==11||/^(\d)\1+$/.test(c)) return false;
   for (let t=9;t<11;t++){ let s=0; for(let i=0;i<t;i++) s+= +c[i]*(t+1-i); if (((s*10)%11)%10 !== +c[t]) return false; } return true; }
 function cnpjOk(c){ c=dig(c); if(c.length!==14||/^(\d)\1+$/.test(c)) return false;
   const calc=n=>{ let s=0,p=n-7; for(let i=0;i<n;i++){ s+= +c[i]*p--; if(p<2)p=9;} const r=s%11; return r<2?0:11-r; };
   return calc(12)===+c[12] && calc(13)===+c[13]; }
 function toast(msg, ms=2600){ const t=document.createElement('div'); t.className='toast'; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(), ms); }
+// Janela de confirmação no estilo do app (substitui o alerta do navegador)
+function confirmar(titulo, texto='', okTxt='Excluir'){
+  return new Promise(res => {
+    const ov = document.createElement('div'); ov.className = 'ov ov2';
+    ov.innerHTML = `<div class="dlg" role="dialog" aria-modal="true"><b>${esc(titulo)}</b>${texto?`<p>${esc(texto).replace(/\n/g,'<br>')}</p>`:'<p></p>'}
+      <div class="row"><button class="btn ghost grow" data-v="0">Cancelar</button><button class="btn bad grow" data-v="1">${esc(okTxt)}</button></div></div>`;
+    ov.addEventListener('click', e => { const v = e.target.closest('[data-v]')?.dataset.v; if (v!=null || e.target===ov){ ov.remove(); res(v==='1'); } });
+    document.body.appendChild(ov); ov.querySelector('[data-v="0"]').focus();
+  });
+}
 const LS = { get(k,d){ try{ const v=localStorage.getItem(k); return v==null?d:JSON.parse(v);}catch(e){return d;} },
              set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} } };
 function loadScript(src){ return new Promise((ok,err)=>{ const s=document.createElement('script'); s.src=src; s.onload=ok; s.onerror=()=>err(new Error('Falha ao carregar '+src)); document.head.appendChild(s); }); }
@@ -214,6 +244,7 @@ function loadScript(src){ return new Promise((ok,err)=>{ const s=document.create
 const IC = {
   home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>',
   users:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17 14.5c2.4.2 4 1.8 4.5 4.5"/></svg>',
+  userplus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="8" r="3.5"/><path d="M3 20c.8-3.6 3.6-5.5 7-5.5 1.6 0 3 .4 4.2 1.1"/><path d="M19 14v6M16 17h6"/></svg>',
   money:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9.5v5M18 9.5v5"/></svg>',
   cal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
   up:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M4 15v4a2 2 0 002 2h12a2 2 0 002-2v-4"/></svg>',
@@ -225,7 +256,7 @@ const IC = {
 };
 
 /* ---------------- banco de dados (Supabase ou local) ---------------- */
-const TABELAS = ['afiliados','movimentos','eventos','evento_tarefas','usuarios'];
+const TABELAS = ['afiliados','movimentos','eventos','evento_tarefas','usuarios','renovacoes'];
 const Local = {
   db: null,
   load(){ if (this.db) return this.db;
@@ -279,13 +310,13 @@ function erroMsg(e){ const m = e?.message || String(e);
   return m; }
 
 /* ---------------- estado ---------------- */
-const S = { me:null, tab: LS.get('masto_tab','inicio'), afiliados:[], movimentos:[], eventos:[], tarefas:[], usuarios:[],
+const S = { me:null, tab: LS.get('masto_tab','inicio'), afiliados:[], movimentos:[], eventos:[], tarefas:[], usuarios:[], renovacoes:[],
   filtroAf:'todos', buscaAf:'', mesFin: hojeISO().slice(0,7), tipoFin:'saida', imp:null, impFiltro:'identificar', priv: LS.get('masto_priv',false) };
 
 async function carregar(...tabs){
   tabs = tabs.length ? tabs : TABELAS;
-  const map = {afiliados:'afiliados', movimentos:'movimentos', eventos:'eventos', evento_tarefas:'tarefas', usuarios:'usuarios'};
-  await Promise.all(tabs.map(async t => { S[map[t]] = await DB.all(t); }));
+  const map = {afiliados:'afiliados', movimentos:'movimentos', eventos:'eventos', evento_tarefas:'tarefas', usuarios:'usuarios', renovacoes:'renovacoes'};
+  await Promise.all(tabs.map(async t => { try { S[map[t]] = await DB.all(t); } catch(e){ if (t==='renovacoes') S.renovacoes = []; else throw e; } }));
   S.movimentos.forEach(m => m.valor = Number(m.valor));
   S.afiliados.forEach(a => { a.valor_mensal = Number(a.valor_mensal)||0; });
 }
@@ -293,6 +324,7 @@ async function carregar(...tabs){
 /* ---------------- regra de mensalidade / atraso ---------------- */
 // Soma tudo que o afiliado já pagou e compara com as competências vencidas desde o início.
 // Pagamento maior que a mensalidade cobre os meses seguintes (e paga primeiro os mais antigos).
+// 1 ou 2 meses sem pagar = "pendente" (amarelo). 3 ou mais = "em atraso" (vermelho).
 function statusAf(a, hoje = new Date()){
   const pago = S.movimentos.filter(m => m.afiliado_id === a.id && m.valor > 0).reduce((s,m)=>s+m.valor,0);
   if (!a.ativo) return {k:'inativo', txt:'Inativo', pago};
@@ -300,7 +332,7 @@ function statusAf(a, hoje = new Date()){
   if (!(v > 0)) return {k:'livre', txt:'Sem valor fixo', pago};
   const [y0,m0] = (a.inicio || hojeISO()).split('-').map(Number);
   const h0 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
-  const venc = (y,m) => new Date(y, m-1, Math.min(a.dia_vencimento||10, new Date(y, m, 0).getDate()));
+  const venc = (y,m) => new Date(y, m-1, Math.min(a.dia_vencimento||DIA_VENC_PADRAO, new Date(y, m, 0).getDate()));
   let y=y0, m=m0, vencidas=0;
   while (y < hoje.getFullYear() || (y===hoje.getFullYear() && m <= hoje.getMonth()+1)) {
     if (venc(y,m) < h0) vencidas++;
@@ -312,23 +344,44 @@ function statusAf(a, hoje = new Date()){
   const deve = vencidas*v - pago;
   if (deve > 0.005) {
     const meses = Math.ceil(deve / v - 1e-9);
-    return {k:'atraso', txt: meses===1 ? '1 mês em atraso' : `${meses} meses em atraso`, meses, deve, pago, pagoAte};
+    if (meses >= MESES_ATRASO) return {k:'atraso', txt:`${meses} meses em atraso`, curto:`${meses} meses`, meses, deve, pago, pagoAte};
+    return {k:'pendente', txt: meses===1 ? '1 mês pendente' : `${meses} meses pendentes`, curto: meses===1 ? '1 mês' : `${meses} meses`, meses, deve, pago, pagoAte};
   }
   const prox = compN(cobertos); const dv = venc(prox.y, prox.m);
   const dias = Math.round((dv - h0) / 864e5);
   if (dias <= 5) return {k:'vence', txt: dias<=0 ? 'Vence hoje' : `Vence em ${dias} dia${dias>1?'s':''}`, pago, pagoAte, prox:dv};
   return {k:'emdia', txt:'Em dia', pago, pagoAte, prox:dv};
 }
+const temDivida = s => s && (s.k==='atraso' || s.k==='pendente');
 const compTxt = c => c ? `${MESES[c.m-1]}/${c.y}` : '—';
-const BADGE = {atraso:'b-atraso', vence:'b-vence', emdia:'b-emdia', inativo:'b-mute', livre:'b-mute'};
+const BADGE = {atraso:'b-atraso', pendente:'b-pend', vence:'b-vence', emdia:'b-emdia', inativo:'b-mute', livre:'b-mute'};
 
 function waLink(a, st){
   let tel = dig(a.telefone); if (!tel) return null; if (tel.length <= 11) tel = '55' + tel;
   const nome = (a.nome||'').split(' ')[0];
-  const msg = st && st.k==='atraso'
+  const msg = temDivida(st)
     ? `Olá ${nome}, tudo bem? Aqui é da Associação Mastodonte. Consta em aberto ${st.meses} mensalidade${st.meses>1?'s':''}, total de ${brl(st.deve)}. Se já pagou, desconsidere. Obrigado pelo apoio! 🦣`
     : `Olá ${nome}, tudo bem? Aqui é da Associação Mastodonte.`;
   return `https://wa.me/${tel}?text=${encodeURIComponent(msg)}`;
+}
+
+/* ---------------- renovação 2027 ---------------- */
+const ANO_RENOV = 2027;
+const renovou = a => S.renovacoes.find(r => r.afiliado_id === a.id && r.ano === ANO_RENOV);
+function linkRenov(a){ if (!a.token_renovacao) return null;
+  return location.origin + location.pathname.replace(/[^/]*$/, '') + 'renovacao.html?t=' + a.token_renovacao; }
+function waRenov(a){
+  const link = linkRenov(a); if (!link) return null;
+  const nome = (a.nome||'').split(' ')[0];
+  const msg = `Olá ${nome}, tudo bem? Aqui é da Associação Mastodonte 🦣\nEstá aberta a renovação do cadastro para ${ANO_RENOV}. Seus dados já estão preenchidos, é só conferir e confirmar:\n${link}`;
+  let tel = dig(a.telefone);
+  if (tel && tel.length <= 11) tel = '55' + tel;
+  return (tel ? `https://wa.me/${tel}` : 'https://wa.me/') + `?text=${encodeURIComponent(msg)}`;
+}
+async function copiarRenov(id){
+  const a = S.afiliados.find(x=>x.id===id); const link = linkRenov(a);
+  try { await navigator.clipboard.writeText(link); toast('Link copiado'); }
+  catch(e){ prompt('Copie o link:', link); }
 }
 
 /* ---------------- categorias ---------------- */
@@ -425,8 +478,8 @@ async function abrirApp(){
     <header class="top">
       <img src="mamute.png" alt="">
       <div class="tt"><b>MASTODONTE</b><small>Olá, ${esc((S.me.nome||'').split(' ')[0])}</small></div>
-      <button class="iconbtn" title="Ocultar valores" onclick="togglePriv()">${IC.eye}</button>
-      <button class="iconbtn" title="Configurações" onclick="abrirConfig()">${IC.gear}</button>
+      <button class="iconbtn" title="Ocultar valores" aria-label="Ocultar valores" onclick="togglePriv()">${IC.eye}</button>
+      <button class="iconbtn" title="Configurações" aria-label="Configurações" onclick="abrirConfig()">${IC.gear}</button>
     </header>
     ${DEMO ? '<div class="demo">Modo demonstração — os dados ficam só neste aparelho</div>' : ''}
     <main id="view"><div class="empty"><span class="spin"></span></div></main>
@@ -457,6 +510,7 @@ function vInicio(){
   const ativos = S.afiliados.filter(a=>a.ativo);
   const st = ativos.map(a=>({a, s:statusAf(a)}));
   const atr = st.filter(x=>x.s.k==='atraso').sort((x,y)=>y.s.deve-x.s.deve);
+  const pend = st.filter(x=>x.s.k==='pendente').sort((x,y)=>y.s.deve-x.s.deve);
   const vence = st.filter(x=>x.s.k==='vence');
   const mes = hojeISO().slice(0,7);
   const movMes = S.movimentos.filter(m=>m.data.startsWith(mes) && m.valor);
@@ -466,57 +520,80 @@ function vInicio(){
   const totDeve = atr.reduce((s,x)=>s+x.s.deve,0);
   const prox = S.eventos.filter(e=>e.data && e.data>=hojeISO() && e.status!=='cancelado').sort((a,b)=>a.data.localeCompare(b.data))[0];
   const naoId = S.movimentos.filter(m=>m.valor>0 && !m.afiliado_id && m.categoria==='Boletos (sem identificação)').length;
+  const nomeMes = MESES_L[+mes.slice(5)-1];
   $('#view').innerHTML = `
+  <div class="quick">
+    <button onclick="escolherPag()">${IC.money}<span>Registrar pagamento</span></button>
+    <button onclick="formAf()">${IC.userplus}<span>Novo afiliado</span></button>
+    <button onclick="ir('importar')">${IC.up}<span>Importar extrato</span></button>
+  </div>
   <div class="kpis">
-    <div class="card kpi ${atr.length?'bad':''}"><small>Em atraso</small><b>${atr.length}</b><span class="muted val">${brl(totDeve)}</span></div>
-    <div class="card kpi"><small>Afiliados ativos</small><b>${ativos.length}</b><span class="muted">${vence.length} vencendo</span></div>
-    <div class="card kpi ok"><small>Entradas ${MESES[+mes.slice(5)-1]}</small><b class="val">${brl(ent)}</b><span class="muted val">mensal. ${brl(mensMes)}</span></div>
-    <div class="card kpi"><small>Saídas ${MESES[+mes.slice(5)-1]}</small><b class="val">${brl(sai)}</b><span class="muted val">saldo ${brl(ent-sai)}</span></div>
+    <div class="card kpi ${atr.length?'bad':''}"><small>Em atraso (3+ meses)</small><b>${atr.length}</b><span class="muted val">${brl(totDeve)}</span></div>
+    <div class="card kpi ${pend.length?'warn':''}"><small>Pendentes (1–2 meses)</small><b>${pend.length}</b><span class="muted">${ativos.length} ativos · ${vence.length} vencendo</span></div>
+    <div class="card kpi ok"><small>Entradas de ${nomeMes}</small><b class="val">${brl(ent)}</b><span class="muted val">mensalidades ${brl(mensMes)}</span></div>
+    <div class="card kpi"><small>Saídas de ${nomeMes}</small><b class="val">${brl(sai)}</b><span class="muted val">saldo ${brl(ent-sai)}</span></div>
   </div>
   ${prox ? `<div class="sec-h"><h2>Próximo evento</h2></div>
     <div class="list"><div class="li" onclick="abrirEvento(${prox.id})">${evData(prox)}<div class="grow"><div class="t">${esc(prox.nome)}</div><div class="s">${esc([prox.hora, prox.local].filter(Boolean).join(' · '))}</div></div><span class="badge b-acc">${esc(prox.status)}</span></div></div>` : ''}
-  <div class="sec-h"><h2>Mensalidades em atraso</h2>${atr.length?`<span class="badge b-atraso">${atr.length}</span>`:''}</div>
+  <div class="sec-h"><h2>Em atraso</h2>${atr.length?`<span class="badge b-atraso">${atr.length}</span>`:''}</div>
   ${atr.length ? `<div class="list">${atr.slice(0,30).map(({a,s})=>linhaAf(a,s,true)).join('')}</div>
      ${atr.length>30?`<button class="btn ghost wide" style="margin-top:8px" onclick="S.filtroAf='atraso';ir('afiliados')">Ver todos (${atr.length})</button>`:''}`
-   : `<div class="card empty">${ativos.length ? 'Ninguém em atraso. 👏' : 'Cadastre os afiliados para acompanhar as mensalidades.'}</div>`}
+   : `<div class="card empty">${ativos.length ? 'Ninguém com 3 meses ou mais sem pagar. 👏' : 'Cadastre os afiliados para acompanhar as mensalidades.'}</div>`}
+  ${pend.length ? `<div class="sec-h"><h2>Pendentes</h2><span class="badge b-pend">${pend.length}</span></div>
+    <div class="list">${pend.slice(0,30).map(({a,s})=>linhaAf(a,s,true)).join('')}</div>
+    ${pend.length>30?`<button class="btn ghost wide" style="margin-top:8px" onclick="S.filtroAf='pendente';ir('afiliados')">Ver todos (${pend.length})</button>`:''}` : ''}
   ${vence.length ? `<div class="sec-h"><h2>Vencendo nos próximos dias</h2></div><div class="list">${vence.map(({a,s})=>linhaAf(a,s,true)).join('')}</div>` : ''}
-  ${naoId ? `<div class="card" style="margin-top:14px"><b>${naoId} boleto${naoId>1?'s':''} sem identificação</b><p class="muted" style="margin:4px 0 10px">O extrato do banco junta os boletos do dia sem dizer de quem é. Abra no Financeiro e use “Dar baixa em afiliados” para distribuir.</p><button class="btn sm ghost" onclick="S.tipoFin='naoid';ir('financeiro')">Ver boletos</button></div>` : ''}
+  ${ativos.length ? (()=>{ const nr = ativos.filter(a=>renovou(a)).length; return `<div class="card" style="margin-top:14px"><div class="row"><div class="grow"><b>Renovação ${ANO_RENOV}</b><div class="muted">${nr} de ${ativos.length} afiliados já renovaram</div></div><button class="btn sm ghost" onclick="S.filtroAf='nren';ir('afiliados')">Ver quem falta</button></div>
+    <div class="bars" style="margin-top:10px"><div class="bt"><div class="bf" style="width:${(nr/ativos.length*100).toFixed(1)}%;background:var(--ok)"></div></div></div></div>`; })() : ''}
+  ${naoId ? `<div class="card" style="margin-top:14px"><b>${naoId} boleto${naoId>1?'s':''} sem identificação</b><p class="muted" style="margin:4px 0 10px">O extrato do banco junta os boletos do dia sem dizer de quem é. Abra o boleto e toque em “Dar baixa em afiliados” para distribuir.</p><button class="btn sm ghost" onclick="S.tipoFin='naoid';ir('financeiro')">Ver boletos</button></div>` : ''}
   `;
 }
 function evData(e){ if (!e.data) return `<div class="ev-date"><b>?</b><small>data</small></div>`; const [y,m,d]=e.data.split('-'); return `<div class="ev-date"><b>${d}</b><small>${MESES[+m-1]}</small></div>`; }
 function linhaAf(a, s, comWa=false){
-  const ini = (a.nome||'?').split(' ').filter(Boolean).slice(0,2).map(x=>x[0]).join('');
   const w = comWa ? waLink(a,s) : null;
   return `<div class="li st-${s.k}" onclick="abrirAf(${a.id})">
-    <div class="avatar">${esc(ini)}</div>
+    <div class="avatar">${esc(iniciais(a.nome))}</div>
     <div class="grow"><div class="t">${esc(a.nome)}</div>
-      <div class="s">${s.k==='atraso' ? `<span class="val">${brl(s.deve)}</span> · pago até ${compTxt(s.pagoAte)}` : `<span class="val">${brl(a.valor_mensal)}</span>/mês · dia ${a.dia_vencimento}${s.pagoAte?` · pago até ${compTxt(s.pagoAte)}`:''}`}</div></div>
-    <span class="badge ${BADGE[s.k]}">${s.k==='atraso' ? (s.meses+(s.meses>1?' meses':' mês')) : s.txt}</span>
-    ${w ? `<a class="wa" href="${w}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Cobrar no WhatsApp">${IC.wa}</a>` : ''}
+      <div class="s">${temDivida(s) ? `<span class="val">${brl(s.deve)}</span> em aberto · pago até ${compTxt(s.pagoAte)}` : `<span class="val">${brl(a.valor_mensal)}</span>/mês · dia ${a.dia_vencimento}${s.pagoAte?` · pago até ${compTxt(s.pagoAte)}`:''}`}</div></div>
+    <span class="badge ${BADGE[s.k]}">${temDivida(s) ? s.curto : s.txt}</span>
+    ${w ? `<a class="wa" href="${w}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Cobrar no WhatsApp" aria-label="Cobrar no WhatsApp">${IC.wa}</a>` : ''}
   </div>`;
 }
+// Atalho "Registrar pagamento": escolhe o afiliado e abre o formulário
+function escolherPag(){
+  const ops = S.afiliados.filter(a=>a.ativo).map(a=>({a, s:statusAf(a)}))
+    .sort((x,y)=>(temDivida(y.s)-temDivida(x.s)) || x.a.nome.localeCompare(y.a.nome));
+  if (!ops.length) return toast('Cadastre um afiliado primeiro.');
+  abrirSheet(`<h3>Registrar pagamento</h3><p class="muted">Toque no afiliado que pagou.</p>
+    <input class="search" style="margin-top:10px" placeholder="Buscar pelo nome" oninput="pFiltra(this.value)">
+    <div class="list" id="pLista" style="margin-top:10px">${ops.map(({a,s})=>`<div class="li st-${s.k}" data-n="${esc(norm(a.nome))}" onclick="formPag(${a.id})">
+      <div class="avatar">${esc(iniciais(a.nome))}</div><div class="grow"><div class="t">${esc(a.nome)}</div><div class="s">${esc(s.txt)}</div></div></div>`).join('')}</div>`);
+}
+function pFiltra(q){ q = norm(q); document.querySelectorAll('#pLista .li').forEach(el => el.classList.toggle('hide', !!q && !el.dataset.n.includes(q))); }
 
 /* =====================================================================
    AFILIADOS
    ===================================================================== */
 function vAfiliados(){
   const all = S.afiliados.map(a=>({a, s:statusAf(a)}));
-  const cnt = k => all.filter(x => k==='todos' ? x.a.ativo : k==='inativo' ? !x.a.ativo : x.s.k===k).length;
+  const passa = (x,k) => k==='todos' ? x.a.ativo : k==='inativo' ? !x.a.ativo : k==='ren' ? x.a.ativo && !!renovou(x.a) : k==='nren' ? x.a.ativo && !renovou(x.a) : x.s.k===k;
+  const cnt = k => all.filter(x => passa(x,k)).length;
   const q = norm(S.buscaAf), qd = dig(S.buscaAf);
-  let lst = all.filter(x => S.filtroAf==='todos' ? x.a.ativo : S.filtroAf==='inativo' ? !x.a.ativo : x.s.k===S.filtroAf);
+  let lst = all.filter(x => passa(x, S.filtroAf));
   if (q) lst = lst.filter(x => norm(x.a.nome).includes(q) || (qd && (dig(x.a.cpf).includes(qd) || dig(x.a.telefone).includes(qd))));
-  const ordem = {atraso:0, vence:1, emdia:2, livre:3, inativo:4};
+  const ordem = {atraso:0, pendente:1, vence:2, emdia:3, livre:4, inativo:5};
   lst.sort((x,y)=> (ordem[x.s.k]-ordem[y.s.k]) || x.a.nome.localeCompare(y.a.nome));
-  const F = [['todos','Ativos'],['atraso','Em atraso'],['vence','Vencendo'],['emdia','Em dia'],['livre','Sem valor'],['inativo','Inativos']];
+  const F = [['todos','Ativos'],['atraso','Em atraso'],['pendente','Pendentes'],['vence','Vencendo'],['emdia','Em dia'],['livre','Sem valor'],['ren','Renovaram '+ANO_RENOV],['nren','Não renovaram'],['inativo','Inativos']];
   $('#view').innerHTML = `
     <input class="search" placeholder="Buscar por nome, CPF ou telefone" value="${esc(S.buscaAf)}" oninput="S.buscaAf=this.value;clearTimeout(window._bt);window._bt=setTimeout(()=>{vAfiliados();const i=$('.search');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)">
     <div class="chips" style="margin-top:10px">${F.map(([k,n])=>`<button class="chip ${S.filtroAf===k?'on':''}" onclick="S.filtroAf='${k}';vAfiliados()">${n}<span class="n">${cnt(k)}</span></button>`).join('')}</div>
-    <div style="margin-top:10px">${lst.length ? `<div class="list">${lst.map(({a,s})=>linhaAf(a,s,s.k==='atraso')).join('')}</div>` : `<div class="card empty">${S.afiliados.length?'Nenhum afiliado nesse filtro.':'Nenhum afiliado ainda. Toque no + para cadastrar.'}</div>`}</div>`;
+    ${S.filtroAf==='nren' && lst.length ? `<p class="muted" style="margin:10px 2px 0">Toque num afiliado e use “Enviar link de renovação”.</p>` : ''}
+    <div style="margin-top:10px">${lst.length ? `<div class="list">${lst.map(({a,s})=>linhaAf(a,s,temDivida(s))).join('')}</div>` : `<div class="card empty">${S.afiliados.length?'Nenhum afiliado nesse filtro.':'Nenhum afiliado ainda. Toque no + para cadastrar.'}</div>`}</div>`;
   fab('formAf()');
 }
 
 function formAf(id, pre={}){
-  const a = id ? S.afiliados.find(x=>x.id===id) : {ativo:true, dia_vencimento:10, inicio: hojeISO().slice(0,7)+'-01', ...pre};
+  const a = id ? S.afiliados.find(x=>x.id===id) : {ativo:true, dia_vencimento:DIA_VENC_PADRAO, valor_mensal:MENSALIDADE_PADRAO, inicio: hojeISO().slice(0,7)+'-01', ...pre};
   abrirSheet(`<h3>${id?'Editar afiliado':'Novo afiliado'}</h3>
   <form class="f" id="fAf">
     <label>Nome completo *</label><input name="nome" required value="${esc(a.nome)}" autocomplete="off">
@@ -524,7 +601,7 @@ function formAf(id, pre={}){
     <div><label>Telefone (WhatsApp)</label><input name="telefone" inputmode="tel" value="${esc(fmtTel(a.telefone))}" placeholder="(17) 99999-9999"></div></div>
     <label>Endereço</label><input name="endereco" value="${esc(a.endereco)}" placeholder="Rua, número, bairro, cidade">
     <div class="g2"><div><label>Valor da doação / mês *</label><input name="valor_mensal" inputmode="decimal" required value="${a.valor_mensal!=null?String(a.valor_mensal).replace('.',','):''}" placeholder="40,00"></div>
-    <div><label>Dia do vencimento</label><input name="dia_vencimento" type="number" min="1" max="31" value="${a.dia_vencimento||10}"></div></div>
+    <div><label>Dia do vencimento</label><input name="dia_vencimento" type="number" min="1" max="31" value="${a.dia_vencimento||DIA_VENC_PADRAO}"></div></div>
     <div class="g2"><div><label>Cobrar desde (mês)</label><input name="inicio" type="month" value="${(a.inicio||'').slice(0,7)}"></div>
     <div><label>Situação</label><select name="ativo"><option value="1" ${a.ativo?'selected':''}>Ativo</option><option value="0" ${!a.ativo?'selected':''}>Inativo</option></select></div></div>
     <label>Observações</label><textarea name="obs">${esc(a.obs)}</textarea>
@@ -541,7 +618,7 @@ function formAf(id, pre={}){
     const valor = parseFloat(String(f.get('valor_mensal')).replace(/\./g,'').replace(',','.'));
     if (!(valor >= 0)) return $('#afErr').textContent = 'Informe o valor da doação.';
     const row = { nome: f.get('nome').trim(), cpf: doc || null, telefone: dig(f.get('telefone')) || null, endereco: f.get('endereco').trim() || null,
-      valor_mensal: valor, dia_vencimento: Math.min(31, Math.max(1, +f.get('dia_vencimento')||10)),
+      valor_mensal: valor, dia_vencimento: Math.min(31, Math.max(1, +f.get('dia_vencimento')||DIA_VENC_PADRAO)),
       inicio: (f.get('inicio') || hojeISO().slice(0,7)) + '-01', ativo: f.get('ativo')==='1', obs: f.get('obs').trim() || null };
     if (doc && S.afiliados.some(x => x.id!==id && dig(x.cpf)===doc)) return $('#afErr').textContent = 'Já existe afiliado com esse CPF/CNPJ.';
     try {
@@ -562,16 +639,19 @@ function formAf(id, pre={}){
 }
 async function excluirAf(id){
   const n = S.movimentos.filter(m=>m.afiliado_id===id).length;
-  if (!confirm(n ? `Esse afiliado tem ${n} pagamento(s). Excluir mesmo assim? (os pagamentos continuam no caixa, sem dono)\n\nDica: para manter o histórico, marque como Inativo.` : 'Excluir esse afiliado?')) return;
+  const ok = await confirmar('Excluir este afiliado?',
+    n ? `Ele tem ${n} pagamento(s) registrado(s). Os pagamentos continuam no caixa, mas ficam sem dono.\n\nDica: para guardar o histórico, marque como Inativo em vez de excluir.` : 'Essa ação não pode ser desfeita.');
+  if (!ok) return;
   try { await DB.del('afiliados',{id}); await carregar('afiliados','movimentos'); fecharSheet(); toast('Afiliado excluído'); render(); } catch(e){ toast(erroMsg(e)); }
 }
 function abrirAf(id){
   const a = S.afiliados.find(x=>x.id===id); if (!a) return; const s = statusAf(a);
   const pags = S.movimentos.filter(m=>m.afiliado_id===id).sort((x,y)=>y.data.localeCompare(x.data));
   const w = waLink(a,s);
+  const cor = s.k==='atraso' ? 'bad' : 'warn';
   abrirSheet(`
     <div class="row"><h3 class="grow">${esc(a.nome)}</h3><span class="badge ${BADGE[s.k]}">${s.txt}</span></div>
-    ${s.k==='atraso' ? `<div class="card" style="background:var(--bad-soft);border:0;margin-top:10px"><b style="color:var(--bad)">Em aberto: <span class="val">${brl(s.deve)}</span></b><div class="muted">Pago até ${compTxt(s.pagoAte)} · ${s.txt}</div></div>` : ''}
+    ${temDivida(s) ? `<div class="card" style="background:var(--${cor}-soft);border:0;margin-top:10px"><b style="color:var(--${cor})">Em aberto: <span class="val">${brl(s.deve)}</span></b><div class="muted">Pago até ${compTxt(s.pagoAte)} · ${s.txt}</div></div>` : ''}
     <dl class="kv">
       <dt>Doação</dt><dd class="val">${brl(a.valor_mensal)} / mês · vence dia ${a.dia_vencimento}</dd>
       <dt>Cobrar desde</dt><dd>${compTxt({y:+a.inicio.slice(0,4), m:+a.inicio.slice(5,7)})}</dd>
@@ -587,7 +667,14 @@ function abrirAf(id){
       ${w?`<a class="btn ghost" href="${w}" target="_blank" rel="noopener" style="text-decoration:none">${IC.wa} WhatsApp</a>`:''}
       <button class="btn ghost" onclick="formAf(${id})">Editar</button>
     </div>
-    <div class="sec-h"><h2 style="font-size:17px">Pagamentos</h2><span class="muted">${pags.length}</span></div>
+    ${(()=>{ const r = renovou(a); const w2 = waRenov(a); if (!linkRenov(a)) return '';
+      return `<div class="card" style="margin-top:14px;${r?'background:var(--ok-soft);border:0':''}">
+        <div class="row"><b class="grow">Renovação ${ANO_RENOV}</b><span class="badge ${r?'b-emdia':'b-mute'}">${r?'Renovado':'Não renovou'}</span></div>
+        ${r ? `<div class="muted" style="margin-top:4px">Renovou em ${fdata(r.criado_em)}${r.forma_pagamento?' · prefere '+esc(r.forma_pagamento):''}${r.email?' · '+esc(r.email):''}${r.nascimento?' · nasc. '+fdata(r.nascimento):''}</div>${r.obs?`<div class="muted">Obs.: ${esc(r.obs)}</div>`:''}` : ''}
+        <div class="row" style="margin-top:10px;flex-wrap:wrap">
+          <a class="btn sm acc grow" style="text-decoration:none" href="${w2}" target="_blank" rel="noopener">${IC.wa} Enviar link de renovação</a>
+          <button class="btn sm ghost" onclick="copiarRenov(${id})">Copiar link</button></div></div>`; })()}
+    <div class="sec-h"><h2 style="font-size:18px">Pagamentos</h2><span class="muted">${pags.length}</span></div>
     ${pags.length ? `<div class="list">${pags.map(m=>`<div class="li" onclick="formMov(${m.id})"><div class="grow"><div class="t">${fdata(m.data)}</div><div class="s">${esc(m.descricao)}${m.origem==='extrato'?' · extrato':''}</div></div><div class="v pos val">${brl(m.valor)}</div></div>`).join('')}</div>` : '<div class="card empty">Nenhum pagamento ainda.</div>'}
   `);
 }
@@ -596,7 +683,7 @@ function formPag(afId){
   abrirSheet(`<h3>Registrar pagamento</h3><p class="muted">${esc(a.nome)} — use para dinheiro ou pagamento que não aparece no extrato.</p>
   <form class="f" id="fPag">
     <div class="g2"><div><label>Data</label><input name="data" type="date" value="${hojeISO()}" required></div>
-    <div><label>Valor</label><input name="valor" inputmode="decimal" required value="${String(a.valor_mensal).replace('.',',')}"></div></div>
+    <div><label>Valor</label><input name="valor" inputmode="decimal" required value="${String(a.valor_mensal||MENSALIDADE_PADRAO).replace('.',',')}"></div></div>
     <label>Forma</label><select name="forma"><option>Dinheiro</option><option>PIX</option><option>Boleto</option><option>Cartão</option><option>Outro</option></select>
     <div class="err" id="pErr"></div>
     <div class="row" style="margin-top:8px"><button type="button" class="btn ghost grow" onclick="abrirAf(${afId})">Voltar</button><button class="btn acc grow">Salvar</button></div>
@@ -695,8 +782,9 @@ function formMov(id, pre={}){
 }
 async function excluirMov(id){
   const m = S.movimentos.find(x=>x.id===id);
-  if (!confirm(m.origem==='extrato' ? 'Excluir esse lançamento do extrato? Se importar o mesmo extrato de novo, ele volta.' : 'Excluir esse lançamento?')) return;
-  try { await DB.del('movimentos',{id}); await carregar('movimentos'); fecharSheet(); toast('Excluído'); render(); } catch(e){ toast(erroMsg(e)); }
+  const ok = await confirmar('Excluir este lançamento?', m.origem==='extrato' ? 'Se você importar o mesmo extrato de novo, ele volta.' : 'Essa ação não pode ser desfeita.');
+  if (!ok) return;
+  try { await DB.del('movimentos',{id}); await carregar('movimentos'); fecharSheet(); toast('Lançamento excluído'); render(); } catch(e){ toast(erroMsg(e)); }
 }
 // Divide uma entrada (ex.: boletos do dia somados) entre vários afiliados, sem mudar o total do caixa.
 function distribuir(id){
@@ -713,7 +801,7 @@ function distribuir(id){
 function dAdd(){
   const d = document.createElement('div'); d.className='row f'; d.style.marginTop='8px';
   d.innerHTML = `<select class="grow" style="min-width:0">${'<option value="">Escolha o afiliado…</option>'+window._dOps.map(a=>`<option value="${a.id}" data-v="${a.valor_mensal}">${esc(a.nome)}</option>`).join('')}</select>
-    <input inputmode="decimal" placeholder="valor" style="width:96px;flex:none">`;
+    <input inputmode="decimal" placeholder="valor" style="width:100px;flex:none">`;
   const [sel, inp] = d.children;
   sel.onchange = () => { if (!inp.value) inp.value = String(sel.selectedOptions[0].dataset.v||'').replace('.',','); dRes(); };
   inp.oninput = dRes; $('#dLinhas').appendChild(d);
@@ -748,7 +836,7 @@ function vEventos(){
       <span class="badge ${e.status==='cancelado'?'b-mute':e.status==='realizado'?'b-emdia':'b-acc'}">${esc(e.status)}</span></div>`; };
   $('#view').innerHTML = `
     <div class="sec-h" style="margin-top:4px"><h2>Próximos</h2></div>
-    ${fut.length?`<div class="list">${fut.map(linha).join('')}</div>`:'<div class="card empty">Nenhum evento planejado. Toque no + para criar.</div>'}
+    ${fut.length?`<div class="list">${fut.map(linha).join('')}</div>`:`<div class="card empty">Nenhum evento planejado.<div style="margin-top:12px"><button class="btn acc" onclick="formEvento()">${IC.plus} Criar evento</button></div></div>`}
     ${pas.length?`<div class="sec-h"><h2>Anteriores</h2></div><div class="list">${pas.map(linha).join('')}</div>`:''}`;
   fab('formEvento()');
 }
@@ -774,9 +862,11 @@ function formEvento(id){
       await carregar('eventos'); toast('Evento salvo'); render(); abrirEvento(nid); } catch(e){ $('#eErr').textContent=erroMsg(e); }
   });
 }
-async function excluirEvento(id){ if(!confirm('Excluir esse evento e suas tarefas? (lançamentos financeiros ficam, sem vínculo)')) return;
+async function excluirEvento(id){
+  const ok = await confirmar('Excluir este evento?', 'As tarefas do evento também serão apagadas. Os lançamentos financeiros continuam, só perdem o vínculo.');
+  if (!ok) return;
   try { await DB.del('eventos',{id}); if (DEMO){ const db=Local.load(); db.evento_tarefas=db.evento_tarefas.filter(t=>t.evento_id!==id); Local.save(); }
-    await carregar('eventos','evento_tarefas','movimentos'); fecharSheet(); render(); } catch(e){ toast(erroMsg(e)); } }
+    await carregar('eventos','evento_tarefas','movimentos'); fecharSheet(); toast('Evento excluído'); render(); } catch(e){ toast(erroMsg(e)); } }
 function abrirEvento(id){
   const e = S.eventos.find(x=>x.id===id); if (!e) return;
   const t = S.tarefas.filter(x=>x.evento_id===id).sort((a,b)=>(a.feito-b.feito)||a.id-b.id);
@@ -792,13 +882,13 @@ function abrirEvento(id){
       <div class="card kpi ok"><small>Arrecadado</small><b class="val">${brl(ent)}</b></div>
       <div class="card kpi"><small>Resultado</small><b class="val ${ent-sai>=0?'pos':'neg'}">${brl(ent-sai)}</b></div>
     </div>
-    <div class="sec-h"><h2 style="font-size:17px">Tarefas</h2><span class="muted">${t.filter(x=>x.feito).length}/${t.length}</span></div>
+    <div class="sec-h"><h2 style="font-size:18px">Tarefas</h2><span class="muted">${t.filter(x=>x.feito).length}/${t.length}</span></div>
     <div class="card" style="padding:4px 14px">${t.length ? t.map(x=>`<div class="task ${x.feito?'done':''}"><input type="checkbox" ${x.feito?'checked':''} onchange="tTog(${x.id},this.checked,${id})">
       <div class="grow"><div>${esc(x.descricao)}</div>${x.responsavel||x.prazo?`<div class="muted">${esc([x.responsavel, x.prazo&&('até '+fdata(x.prazo))].filter(Boolean).join(' · '))}</div>`:''}</div>
-      <button class="lnk" style="color:var(--ink3)" onclick="tDel(${x.id},${id})">✕</button></div>`).join('') : '<div class="empty" style="padding:14px">Nenhuma tarefa.</div>'}</div>
-    <form class="f" id="fT" style="margin-top:8px"><div class="row"><input name="d" placeholder="Nova tarefa (ex.: contratar som)" required class="grow"><button class="btn sm acc" style="height:44px">${IC.plus}</button></div>
+      <button class="lnk" style="color:var(--ink3);padding:8px" aria-label="Apagar tarefa" onclick="tDel(${x.id},${id})">✕</button></div>`).join('') : '<div class="empty" style="padding:14px">Nenhuma tarefa.</div>'}</div>
+    <form class="f" id="fT" style="margin-top:8px"><div class="row"><input name="d" placeholder="Nova tarefa (ex.: contratar som)" required class="grow"><button class="btn sm acc" style="height:46px" aria-label="Adicionar tarefa">${IC.plus}</button></div>
       <div class="g2" style="margin-top:6px"><input name="r" placeholder="Responsável"><input name="p" type="date" title="Prazo"></div></form>
-    <div class="sec-h"><h2 style="font-size:17px">Financeiro do evento</h2><button class="btn sm ghost" onclick="formMov(null,{evento_id:${id},valor:-1})">${IC.plus} Lançar</button></div>
+    <div class="sec-h"><h2 style="font-size:18px">Financeiro do evento</h2><button class="btn sm ghost" onclick="formMov(null,{evento_id:${id},valor:-1})">${IC.plus} Lançar</button></div>
     ${movs.length?`<div class="list">${movs.sort((a,b)=>b.data.localeCompare(a.data)).map(linhaMov).join('')}</div>`:'<p class="muted">Lance gastos e arrecadações aqui ou vincule lançamentos do extrato a este evento.</p>'}
     <div class="row" style="margin-top:14px"><button class="btn ghost grow" onclick="formEvento(${id})">Editar evento</button><button class="btn ghost grow" onclick="fecharSheet()">Fechar</button></div>`);
   $('#fT').addEventListener('submit', async ev => { ev.preventDefault(); const f=new FormData(ev.target);
@@ -815,7 +905,7 @@ function vImportar(){
   if (S.imp) return vImpPreview();
   $('#view').innerHTML = `
     <label class="drop" for="impFile"><b>Importar extrato</b><small>Excel (.xlsx / .xls), CSV ou PDF do banco</small>
-      <div style="margin-top:12px"><span class="btn acc">${IC.up} Escolher arquivo</span></div></label>
+      <div style="margin-top:14px"><span class="btn acc">${IC.up} Escolher arquivo</span></div></label>
     <input type="file" id="impFile" accept=".xlsx,.xls,.csv,.pdf" class="hide" onchange="lerArquivo(this.files[0])">
     <div id="impMsg" style="margin-top:12px"></div>
     <div class="card" style="margin-top:14px"><b>Como funciona</b>
@@ -955,7 +1045,7 @@ function vImpPreview(){
     <div class="chips" style="margin-top:12px">${F.map(([k,n,arr])=>`<button class="chip ${S.impFiltro===k?'on':''}" onclick="S.impFiltro='${k}';vImpPreview()">${n}<span class="n">${arr.length}</span></button>`).join('')}</div>
     <div class="list" style="margin-top:8px">${atual.length ? atual.slice(0,400).map(l=>linhaImp(l, L.indexOf(l))).join('') : '<div class="empty">Nada aqui.</div>'}</div>
     ${atual.length>400?`<p class="muted">Mostrando 400 de ${atual.length}. Todas serão importadas.</p>`:''}
-    <div style="position:sticky;bottom:calc(76px + env(safe-area-inset-bottom));margin-top:12px">
+    <div style="position:sticky;bottom:calc(84px + env(safe-area-inset-bottom));margin-top:12px">
       <button class="btn acc wide" id="impGo" onclick="confirmarImp()" ${totSel.length?'':'disabled'}>Importar ${totSel.length} lançamento${totSel.length!==1?'s':''}</button></div>`;
 }
 function linhaImp(l, i){
@@ -1009,7 +1099,7 @@ function abrirConfig(){
   const adm = S.me.papel === 'adm';
   abrirSheet(`<h3>Configurações</h3>
     <dl class="kv"><dt>Usuário</dt><dd>${esc(S.me.nome)}</dd><dt>E-mail</dt><dd>${esc(S.me.email)}</dd><dt>Perfil</dt><dd>${S.me.papel==='adm'?'Administrador':'Membro'}</dd></dl>
-    ${adm ? `<div class="sec-h"><h2 style="font-size:17px">Quem pode acessar</h2></div>
+    ${adm ? `<div class="sec-h"><h2 style="font-size:18px">Quem pode acessar</h2></div>
       <div class="list">${S.usuarios.map(u=>`<div class="li" style="cursor:default"><div class="grow"><div class="t">${esc(u.nome)}</div><div class="s">${esc(u.email)}</div></div>
         <span class="badge ${u.papel==='adm'?'b-acc':'b-mute'}">${u.papel==='adm'?'adm':'membro'}</span>
         ${u.email!==S.me.email?`<button class="btn sm ${u.ativo?'ghost':'danger'}" onclick="uTog('${esc(u.email)}',${!u.ativo})">${u.ativo?'Bloquear':'Liberar'}</button>`:''}</div>`).join('')}</div>
@@ -1018,7 +1108,7 @@ function abrirConfig(){
         <select name="papel"><option value="membro">Membro</option><option value="adm">Administrador</option></select></div>
         <button class="btn acc wide" style="margin-top:10px">Liberar acesso</button>
         <p class="muted">Depois a pessoa abre o app, toca em <b>Primeiro acesso</b> e cria a senha com esse e-mail.</p></form>` : ''}
-    <div class="sec-h"><h2 style="font-size:17px">Dados</h2></div>
+    <div class="sec-h"><h2 style="font-size:18px">Dados</h2></div>
     <button class="btn ghost wide" onclick="exportar()">Baixar planilha (afiliados + financeiro)</button>
     <button class="btn danger wide" style="margin-top:10px" onclick="sair()">${IC.out} Sair</button>
     <p class="muted" style="text-align:center;margin-top:14px">Mastodonte Gestão ${VERSAO}${DEMO?' · demonstração':''}</p>`);
@@ -1032,7 +1122,7 @@ async function exportar(){
   try {
     if (!window.XLSX) await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
     const af = S.afiliados.map(a=>{ const s=statusAf(a); return { Nome:a.nome, 'CPF/CNPJ':fmtDoc(a.cpf), Telefone:fmtTel(a.telefone), Endereço:a.endereco||'',
-      'Doação/mês':a.valor_mensal, 'Dia venc.':a.dia_vencimento, 'Cobrar desde':a.inicio, Situação:s.txt, 'Pago até':compTxt(s.pagoAte), 'Em aberto':s.deve||0, 'Total pago':s.pago, Ativo:a.ativo?'sim':'não' }; });
+      'Doação/mês':a.valor_mensal, 'Dia venc.':a.dia_vencimento, 'Cobrar desde':a.inicio, Situação:s.txt, 'Pago até':compTxt(s.pagoAte), 'Em aberto':s.deve||0, 'Total pago':s.pago, Ativo:a.ativo?'sim':'não', ['Renovou '+ANO_RENOV]: renovou(a)?'sim':'não', 'Link renovação': linkRenov(a)||'' }; });
     const mv = S.movimentos.filter(m=>m.valor).sort((a,b)=>a.data.localeCompare(b.data)).map(m=>({ Data:fdata(m.data), Descrição:m.descricao, Nome:m.nome||'', 'CPF/CNPJ':fmtDoc(m.documento),
       Valor:m.valor, Categoria:m.categoria||'', Afiliado:S.afiliados.find(a=>a.id===m.afiliado_id)?.nome||'', Evento:S.eventos.find(e=>e.id===m.evento_id)?.nome||'', Origem:m.origem }));
     const wb = XLSX.utils.book_new();

@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Renovação 2027 · Associação Mastodonte</title>
+<meta name="theme-color" content="#141414">
+<meta name="robots" content="noindex">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{--bg:#f3efe6;--card:#fffdf8;--ink:#161513;--ink2:#4f4a43;--ink3:#6e685d;--line:#e3ddd0;--brand:#141414;--brand-ink:#f0eadc;
+  --accent:#b8742a;--ok:#2f7a4c;--ok-soft:#e1f0e5;--bad:#b8352a;--bad-soft:#f8dfdb;--slab:"Zilla Slab",Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+@media (prefers-color-scheme:dark){:root{--bg:#121110;--card:#1c1b19;--ink:#efeae0;--ink2:#c9c2b4;--ink3:#a39c8f;--line:#2e2c28;
+  --brand:#0a0a0a;--accent:#d8964b;--ok:#5cbf83;--ok-soft:#173222;--bad:#ec6f62;--bad-soft:#3d1b17}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--sans)}
+header{background:var(--brand);color:var(--brand-ink);padding:calc(18px + env(safe-area-inset-top)) 20px 26px;text-align:center}
+header img{height:44px}
+header h1{font-family:var(--slab);font-size:26px;margin:8px 0 2px;letter-spacing:.3px}
+header p{margin:0;opacity:.75;font-size:15px}
+main{max-width:520px;margin:-14px auto 0;padding:0 16px calc(30px + env(safe-area-inset-bottom))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 1px 2px rgba(0,0,0,.05),0 6px 18px rgba(0,0,0,.06)}
+h2{font-family:var(--slab);font-size:22px;margin:0 0 4px}
+.muted{color:var(--ink3);font-size:15px;margin:0}
+label{display:block;font-size:14px;font-weight:700;color:var(--ink2);margin:16px 0 6px}
+input,select,textarea{width:100%;padding:13px 12px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink);font:inherit;font-size:16px}
+textarea{min-height:70px;resize:vertical}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
+.cpf{font-weight:700;color:var(--ink)}
+.check{display:flex;gap:12px;align-items:flex-start;margin-top:18px;font-size:15px;font-weight:600;color:var(--ink)}
+.check input{width:24px;height:24px;flex:none;margin:0;accent-color:var(--accent)}
+button{width:100%;margin-top:18px;border:0;border-radius:12px;padding:15px;font:inherit;font-weight:700;font-size:17px;background:var(--accent);color:#fff;cursor:pointer}
+button:disabled{opacity:.55}
+.err{color:var(--bad);font-size:15px;margin-top:10px;min-height:1em}
+.done{text-align:center;padding:28px 18px}
+.done .ic{width:64px;height:64px;border-radius:50%;background:var(--ok-soft);color:var(--ok);display:grid;place-items:center;margin:0 auto 12px;font-size:34px}
+.spin{display:inline-block;width:22px;height:22px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+</style>
+</head>
+<body>
+<header>
+  <img src="mamute.png" alt="">
+  <h1>Renovação 2027</h1>
+  <p>Associação Mastodonte</p>
+</header>
+<main><div class="card" id="box"><div style="text-align:center;padding:20px"><span class="spin"></span></div></div></main>
+
+<script>
+const CFG = { url: 'https://cknzysljezvpazonvibb.supabase.co', key: 'sb_publishable_ji48PdmWNR5nvQkXMhbbCQ_DEekbpVL' };
+const sb = supabase.createClient(CFG.url, CFG.key);
+const box = document.getElementById('box');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const dig = s => String(s ?? '').replace(/\D/g, '');
+const fmtTel = t => { t = dig(t); if (t.length===11) return t.replace(/(\d{2})(\d{5})(\d{4})/,'($1) $2-$3');
+  if (t.length===10) return t.replace(/(\d{2})(\d{4})(\d{4})/,'($1) $2-$3'); return t; };
+const token = new URLSearchParams(location.search).get('t');
+
+function erro(msg){ box.innerHTML = `<div class="done"><h2>Link inválido</h2><p class="muted">${esc(msg)}</p></div>`; }
+
+async function iniciar(){
+  if (!token || !/^[0-9a-f-]{36}$/i.test(token)) return erro('Este link está incompleto. Peça um novo link para a associação.');
+  const { data, error } = await sb.rpc('renovacao_dados', { p_token: token });
+  if (error) return erro('Não foi possível abrir agora. Verifique sua internet e tente de novo.');
+  if (!data) return erro('Este link não foi encontrado. Peça um novo link para a associação.');
+  form(data);
+}
+
+function form(d){
+  box.innerHTML = `
+    <h2>Olá, ${esc((d.nome||'').split(' ')[0].toLowerCase().replace(/^./, c=>c.toUpperCase()))}!</h2>
+    <p class="muted">${d.renovado ? 'Você já renovou para 2027. Se quiser, pode corrigir seus dados e enviar de novo.' : 'Confira seus dados, corrija o que for preciso e confirme a renovação.'}</p>
+    ${d.cpf ? `<p class="muted" style="margin-top:10px">CPF: <span class="cpf">${esc(d.cpf)}</span></p>` : ''}
+    <form id="f" novalidate>
+      <label for="nome">Nome completo</label>
+      <input id="nome" name="nome" required autocomplete="name" value="${esc(d.nome)}">
+      <label for="tel">Telefone (WhatsApp)</label>
+      <input id="tel" name="tel" inputmode="tel" autocomplete="tel" placeholder="(17) 99999-9999" value="${esc(fmtTel(d.telefone))}">
+      <label for="email">E-mail</label>
+      <input id="email" name="email" type="email" inputmode="email" autocomplete="email" value="${esc(d.email)}">
+      <label for="nasc">Data de nascimento</label>
+      <input id="nasc" name="nasc" type="date" value="${esc(d.nascimento||'')}">
+      <label for="end">Endereço</label>
+      <input id="end" name="end" autocomplete="street-address" placeholder="Rua, número, bairro, cidade" value="${esc(d.endereco)}">
+      <label for="forma">Como prefere pagar a mensalidade?</label>
+      <select id="forma" name="forma"><option>Boleto</option><option>PIX</option></select>
+      <label for="obs">Observações (opcional)</label>
+      <textarea id="obs" name="obs"></textarea>
+      <label class="check"><input type="checkbox" id="ok" required> Quero continuar associado à Mastodonte em 2027</label>
+      <div class="err" id="err"></div>
+      <button id="btn" type="submit">Confirmar renovação</button>
+    </form>`;
+  document.getElementById('f').addEventListener('submit', enviar);
+}
+
+async function enviar(ev){
+  ev.preventDefault();
+  const f = new FormData(ev.target), err = document.getElementById('err'), btn = document.getElementById('btn');
+  err.textContent = '';
+  if (!f.get('nome').trim()) return err.textContent = 'Preencha o nome completo.';
+  const tel = dig(f.get('tel'));
+  if (tel && (tel.length < 10 || tel.length > 11)) return err.textContent = 'Confira o telefone: use DDD + número.';
+  if (!document.getElementById('ok').checked) return err.textContent = 'Marque a caixa para confirmar a renovação.';
+  btn.disabled = true; btn.textContent = 'Enviando…';
+  const { error } = await sb.rpc('renovacao_enviar', { p_token: token, p_nome: f.get('nome').trim(), p_telefone: tel,
+    p_email: f.get('email').trim(), p_endereco: f.get('end').trim(), p_nascimento: f.get('nasc') || null,
+    p_forma: f.get('forma'), p_obs: f.get('obs').trim() });
+  if (error){ btn.disabled = false; btn.textContent = 'Confirmar renovação';
+    return err.textContent = 'Não foi possível enviar. Verifique sua internet e tente de novo.'; }
+  box.innerHTML = `<div class="done"><div class="ic">✓</div><h2>Renovação confirmada!</h2>
+    <p class="muted">Obrigado por continuar com a Mastodonte em 2027. 🦣</p></div>`;
+}
+iniciar();
+</script>
+</body>
+</html>
