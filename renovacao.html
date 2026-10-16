@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Renovação 2027 · Associação Mastodonte</title>
+<title>Página do afiliado · Associação Mastodonte</title>
 <meta name="theme-color" content="#141414">
 <meta name="robots" content="noindex">
 <link rel="icon" href="icon-192.png">
@@ -38,6 +38,16 @@ button:disabled{opacity:.55}
 .err{color:var(--bad);font-size:15px;margin-top:10px;min-height:1em}
 .done{text-align:center;padding:28px 18px}
 .done .ic{width:64px;height:64px;border-radius:50%;background:var(--ok-soft);color:var(--ok);display:grid;place-items:center;margin:0 auto 12px;font-size:34px}
+.sec{font-family:var(--slab);font-size:20px;margin:22px 4px 8px}
+.st{display:flex;align-items:center;gap:12px}
+.st .dot{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;font-size:22px;flex:none}
+.ok .dot{background:var(--ok-soft);color:var(--ok)} .warn .dot{background:#f8edc8;color:#9a6f00} .bad .dot{background:var(--bad-soft);color:var(--bad)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:15px;margin-top:12px}
+.kv dt{color:var(--ink3)} .kv dd{margin:0;font-weight:700}
+.pg{display:flex;justify-content:space-between;padding:10px 0;border-top:1px solid var(--line);font-size:15px}
+.pg:first-child{border-top:0}
+.btn2{display:block;text-align:center;margin-top:12px;padding:13px;border-radius:12px;background:var(--bg);border:1px solid var(--line);color:var(--ink);font-weight:700;text-decoration:none}
+@media (prefers-color-scheme:dark){.warn .dot{background:#3a3013;color:#e2b53c}}
 .spin{display:inline-block;width:22px;height:22px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp 1s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.spin{animation:none}}
@@ -46,10 +56,10 @@ button:disabled{opacity:.55}
 <body>
 <header>
   <img src="mamute.png" alt="">
-  <h1>Renovação 2027</h1>
+  <h1>Página do afiliado</h1>
   <p>Associação Mastodonte</p>
 </header>
-<main><div class="card" id="box"><div style="text-align:center;padding:20px"><span class="spin"></span></div></div></main>
+<main><div id="sit"></div><h2 class="sec" id="tRen" hidden>Renovação 2027</h2><div class="card" id="box"><div style="text-align:center;padding:20px"><span class="spin"></span></div></div></main>
 
 <script>
 const CFG = { url: 'https://cknzysljezvpazonvibb.supabase.co', key: 'sb_publishable_ji48PdmWNR5nvQkXMhbbCQ_DEekbpVL' };
@@ -61,13 +71,60 @@ const fmtTel = t => { t = dig(t); if (t.length===11) return t.replace(/(\d{2})(\
   if (t.length===10) return t.replace(/(\d{2})(\d{4})(\d{4})/,'($1) $2-$3'); return t; };
 const token = new URLSearchParams(location.search).get('t');
 
+const brl = v => (Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const fdata = iso => { const [y,m,d] = String(iso).slice(0,10).split('-'); return `${d}/${m}/${y}`; };
+const MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+// mesma regra do app: 1–2 meses = pendente, 3 ou mais = em atraso
+function situacao(d){
+  const pago = d.pagamentos.reduce((s,p)=>s+Number(p.valor),0), v = Number(d.valor_mensal);
+  if (!(v > 0)) return { k:'ok', txt:'Sem mensalidade fixa', pago };
+  const [y0,m0] = d.inicio.split('-').map(Number), hoje = new Date();
+  const h0 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+  const venc = (y,m) => new Date(y, m-1, Math.min(d.dia_vencimento||20, new Date(y, m, 0).getDate()));
+  let y=y0, m=m0, vencidas=0;
+  while (y < hoje.getFullYear() || (y===hoje.getFullYear() && m <= hoje.getMonth()+1)) { if (venc(y,m) < h0) vencidas++; m++; if (m>12){m=1;y++;} }
+  const cobertos = Math.floor((pago + 0.005) / v);
+  const comp = n => { const t = (m0-1) + n; return `${MESES[t%12]}/${y0 + Math.floor(t/12)}`; };
+  const pagoAte = cobertos > 0 ? comp(cobertos-1) : null;
+  const deve = vencidas*v - pago;
+  if (deve > 0.005){ const meses = Math.ceil(deve/v - 1e-9);
+    return { k: meses>=3 ? 'bad' : 'warn', txt: meses>=3 ? `${meses} meses em atraso` : (meses===1 ? '1 mensalidade pendente' : `${meses} mensalidades pendentes`), deve, pago, pagoAte }; }
+  return { k:'ok', txt:'Mensalidades em dia', pago, pagoAte, prox: comp(cobertos) };
+}
+function mostrarSituacao(d){
+  const s = situacao(d);
+  document.getElementById('sit').innerHTML = `
+    <div class="card ${s.k}"><div class="st"><div class="dot">${s.k==='ok'?'✓':'!'}</div><div><h2 style="margin:0">${s.txt}</h2>
+      <p class="muted">${s.pagoAte ? 'Pago até '+s.pagoAte : 'Nenhuma mensalidade registrada ainda'}</p></div></div>
+      <dl class="kv"><dt>Mensalidade</dt><dd>${brl(d.valor_mensal)} · vence dia ${d.dia_vencimento}</dd>
+        ${s.deve ? `<dt>Em aberto</dt><dd style="color:var(--bad)">${brl(s.deve)}</dd>` : ''}
+        ${s.prox ? `<dt>Próxima</dt><dd>${s.prox}</dd>` : ''}
+        <dt>Total pago</dt><dd>${brl(s.pago)}</dd>
+        <dt>Categoria</dt><dd>${d.categoria==='fundador'?'Sócio fundador':'Sócio contribuinte'}</dd></dl>
+      ${s.deve ? `<p class="muted" style="margin-top:12px">Se você já pagou e ainda aparece aqui, pode ser que o pagamento não tenha sido identificado. Fale com a associação.</p>` : ''}
+    </div>
+    <h2 class="sec">Pagamentos</h2>
+    <div class="card">${d.pagamentos.length ? d.pagamentos.slice(0,24).map(p=>`<div class="pg"><span>${fdata(p.data)} · ${esc(p.forma)}</span><b>${brl(p.valor)}</b></div>`).join('')
+      : '<p class="muted">Nenhum pagamento registrado ainda.</p>'}
+      ${d.pagamentos.length>24 ? `<p class="muted" style="margin-top:8px">Mostrando os 24 mais recentes de ${d.pagamentos.length}.</p>` : ''}</div>
+    ${d.estatuto ? `<a class="btn2" href="#" id="lnkEst">📄 Ler o estatuto da associação</a>` : ''}`;
+  const l = document.getElementById('lnkEst');
+  if (l) l.addEventListener('click', async e => { e.preventDefault(); l.textContent = 'Abrindo…';
+    const { data } = await sb.storage.from('documentos').createSignedUrl(d.estatuto, 3600);
+    l.textContent = '📄 Ler o estatuto da associação';
+    if (data?.signedUrl) location.href = data.signedUrl; else alert('Não foi possível abrir o estatuto agora.'); });
+  document.getElementById('tRen').hidden = false;
+}
+
 function erro(msg){ box.innerHTML = `<div class="done"><h2>Link inválido</h2><p class="muted">${esc(msg)}</p></div>`; }
 
 async function iniciar(){
   if (!token || !/^[0-9a-f-]{36}$/i.test(token)) return erro('Este link está incompleto. Peça um novo link para a associação.');
   const { data, error } = await sb.rpc('renovacao_dados', { p_token: token });
   if (error) return erro('Não foi possível abrir agora. Verifique sua internet e tente de novo.');
-  if (!data) return erro('Este link não foi encontrado. Peça um novo link para a associação.');
+  if (!data) return erro('Este link não foi encontrado ou o cadastro não está ativo. Fale com a associação.');
+  const sit = await sb.rpc('afiliado_situacao', { p_token: token });
+  if (sit.data) mostrarSituacao(sit.data);
   form(data);
 }
 

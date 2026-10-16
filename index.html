@@ -197,13 +197,14 @@ nav.tabs button.on{color:var(--accent)}
    Vazio = MODO DEMONSTRAÇÃO (dados ficam só no aparelho).
    ===================================================================== */
 const CFG = { url: 'https://cknzysljezvpazonvibb.supabase.co', key: 'sb_publishable_ji48PdmWNR5nvQkXMhbbCQ_DEekbpVL' };
-const VERSAO = 'v5';
+const VERSAO = 'v6';
 const DEMO = !CFG.url || !CFG.key;
 const sb = DEMO ? null : supabase.createClient(CFG.url, CFG.key);
 
 /* Regras da associação */
 const MENSALIDADE_PADRAO = 40;   // R$ por mês
 const DIA_VENC_PADRAO = 20;      // dia do vencimento
+const LIMITE_CONTRIB = 250;      // Art. 9º do estatuto: máximo de sócios contribuintes (pode ser aumentado em assembleia)
 const MESES_ATRASO = 3;          // a partir de quantos meses sem pagar conta como "em atraso"
 
 /* ---------------- utilidades ---------------- */
@@ -261,7 +262,7 @@ const IC = {
 /* ---------------- banco de dados (Supabase ou local) ---------------- */
 const TABELAS = ['afiliados','movimentos','eventos','evento_tarefas','usuarios','renovacoes','documentos','indicacoes'];
 // CPF, documento e link de renovação não vêm nessas colunas: só o administrador recebe, à parte
-const COLS = { afiliados:'id,nome,telefone,endereco,valor_mensal,dia_vencimento,inicio,ativo,obs,criado_em',
+const COLS = { afiliados:'id,nome,telefone,endereco,valor_mensal,dia_vencimento,inicio,ativo,obs,criado_em,categoria',
   movimentos:'id,data,descricao,nome,valor,categoria,afiliado_id,evento_id,origem,chave,criado_por,criado_em,obs,comprovante' };
 const ehAdm = () => S.me && S.me.papel === 'adm';
 const ehFin = () => S.me && S.me.papel !== 'adm';
@@ -330,7 +331,7 @@ async function carregar(...tabs){
     if (tabs.includes('afiliados')){
       const { data } = await sb.rpc('afiliados_privado');
       const mp = new Map((data||[]).map(r=>[r.id, r]));
-      S.afiliados.forEach(a => { const r = mp.get(a.id); if (r){ a.cpf = r.cpf; a.token_renovacao = r.token_renovacao; a.foto = r.foto; a.desligado_em = r.desligado_em; a.desligado_motivo = r.desligado_motivo; a.desligado_obs = r.desligado_obs; } });
+      S.afiliados.forEach(a => { const r = mp.get(a.id); if (r){ a.cpf = r.cpf; a.token_renovacao = r.token_renovacao; a.foto = r.foto; a.desligado_em = r.desligado_em; a.desligado_motivo = r.desligado_motivo; a.desligado_obs = r.desligado_obs; a.readmissoes = r.readmissoes || 0; } });
     }
     if (tabs.includes('movimentos')){
       const { data } = await sb.rpc('movimentos_docs');
@@ -373,6 +374,9 @@ function statusAf(a, hoje = new Date()){
   if (dias <= 5) return {k:'vence', txt: dias<=0 ? 'Vence hoje' : `Vence em ${dias} dia${dias>1?'s':''}`, pago, pagoAte, prox:dv};
   return {k:'emdia', txt:'Em dia', pago, pagoAte, prox:dv};
 }
+const contribAtivos = () => S.afiliados.filter(a => a.ativo && a.categoria !== 'fundador').length;
+const idade = iso => { if (!iso) return null; const n = new Date(iso+'T12:00'), h = new Date(); let i = h.getFullYear()-n.getFullYear();
+  if (h.getMonth()<n.getMonth() || (h.getMonth()===n.getMonth() && h.getDate()<n.getDate())) i--; return i; };
 const temDivida = s => s && (s.k==='atraso' || s.k==='pendente');
 const compTxt = c => c ? `${MESES[c.m-1]}/${c.y}` : '—';
 const BADGE = {atraso:'b-atraso', pendente:'b-pend', vence:'b-vence', emdia:'b-emdia', inativo:'b-mute', livre:'b-mute'};
@@ -394,7 +398,7 @@ function linkRenov(a){ if (!a.token_renovacao) return null;
 function waRenov(a){
   const link = linkRenov(a); if (!link) return null;
   const nome = (a.nome||'').split(' ')[0];
-  const msg = `Olá ${nome}, tudo bem? Aqui é da Associação Mastodonte 🦣\nEstá aberta a renovação do cadastro para ${ANO_RENOV}. Seus dados já estão preenchidos, é só conferir e confirmar:\n${link}`;
+  const msg = `Olá ${nome}, tudo bem? Aqui é da Associação Mastodonte 🦣\nNeste link você vê a sua situação nas mensalidades, o estatuto da associação e já pode renovar o cadastro para ${ANO_RENOV}:\n${link}`;
   let tel = dig(a.telefone);
   if (tel && tel.length <= 11) tel = '55' + tel;
   return (tel ? `https://wa.me/${tel}` : 'https://wa.me/') + `?text=${encodeURIComponent(msg)}`;
@@ -530,8 +534,8 @@ const ABAS = [
 const ABAS_FIN = [ ['financeiro','Financeiro',IC.money], ['estatuto','Estatuto',IC.doc] ];
 const abasDoPerfil = () => ehAdm() || DEMO ? ABAS : ABAS_FIN;
 // telas que ficam dentro de "Mais"
-const DENTRO_MAIS = ['importar','estatuto','indicacoes'];
-const VIEWS = () => ({inicio:vInicio, afiliados:vAfiliados, financeiro:vFinanceiro, eventos:vEventos, mais:vMais, importar:vImportar, estatuto:vEstatuto, indicacoes:vIndicacoes});
+const DENTRO_MAIS = ['importar','estatuto','indicacoes','votantes'];
+const VIEWS = () => ({inicio:vInicio, afiliados:vAfiliados, financeiro:vFinanceiro, eventos:vEventos, mais:vMais, importar:vImportar, estatuto:vEstatuto, indicacoes:vIndicacoes, votantes:vVotantes});
 const podeVer = k => abasDoPerfil().some(([x]) => x === k) || ((ehAdm() || DEMO) && DENTRO_MAIS.includes(k));
 async function abrirApp(){
   document.body.classList.toggle('priv', S.priv);
@@ -652,7 +656,10 @@ function vAfiliados(){
   $('#view').innerHTML = `
     <input class="search" placeholder="Buscar por nome, CPF ou telefone" value="${esc(S.buscaAf)}" oninput="S.buscaAf=this.value;clearTimeout(window._bt);window._bt=setTimeout(()=>{vAfiliados();const i=$('.search');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)">
     <div class="chips" style="margin-top:10px">${F.map(([k,n])=>`<button class="chip ${S.filtroAf===k?'on':''}" onclick="S.filtroAf='${k}';vAfiliados()">${n}<span class="n">${cnt(k)}</span></button>`).join('')}</div>
-    ${S.filtroAf==='nren' && lst.length ? `<p class="muted" style="margin:10px 2px 0">Toque num afiliado e use “Enviar link de renovação”.</p>` : ''}
+    ${(()=>{ const c = contribAtivos(), f = S.afiliados.filter(a=>a.ativo && a.categoria==='fundador').length, falta = LIMITE_CONTRIB - c;
+      return `<div class="card" style="margin-top:10px;padding:10px 14px;${falta<=10?'background:var(--warn-soft);border:0':''}"><div class="row"><div class="grow"><b>${c} de ${LIMITE_CONTRIB}</b> contribuintes <span class="muted">· ${f} fundadores</span></div><span class="muted">${falta>0?falta+' vagas':'limite atingido'}</span></div>
+        <div class="bars" style="margin-top:6px"><div class="bt"><div class="bf" style="width:${Math.min(100,c/LIMITE_CONTRIB*100).toFixed(1)}%;${falta<=10?'background:var(--warn)':''}"></div></div></div></div>`; })()}
+    ${S.filtroAf==='nren' && lst.length ? `<p class="muted" style="margin:10px 2px 0">Toque num afiliado e use “Enviar página do afiliado”.</p>` : ''}
     <div style="margin-top:10px">${lst.length ? `<div class="list">${lst.map(({a,s})=>linhaAf(a,s,temDivida(s))).join('')}</div>` : `<div class="card empty">${S.afiliados.length?'Nenhum afiliado nesse filtro.':'Nenhum afiliado ainda. Toque no + para cadastrar.'}</div>`}</div>`;
   fab('formAf()');
 }
@@ -669,6 +676,7 @@ function formAf(id, pre={}){
     <div><label>Dia do vencimento</label><input name="dia_vencimento" type="number" min="1" max="31" value="${a.dia_vencimento||DIA_VENC_PADRAO}"></div></div>
     <div class="g2"><div><label>Cobrar desde (mês)</label><input name="inicio" type="month" value="${(a.inicio||'').slice(0,7)}"></div>
     <div><label>Situação</label><select name="ativo"><option value="1" ${a.ativo?'selected':''}>Ativo</option><option value="0" ${!a.ativo?'selected':''}>Inativo</option></select></div></div>
+    <label>Categoria (Art. 6º do estatuto)</label><select name="categoria"><option value="contribuinte" ${a.categoria!=='fundador'?'selected':''}>Contribuinte</option><option value="fundador" ${a.categoria==='fundador'?'selected':''}>Fundador</option></select>
     <label>Observações</label><textarea name="obs">${esc(a.obs)}</textarea>
     ${!DEMO ? `<label>Foto do rosto ${a.foto?'(já tem foto — escolha outra para trocar)':''}</label><input type="file" name="foto" accept="image/*">` : ''}
     <div class="err" id="afErr"></div>
@@ -685,7 +693,11 @@ function formAf(id, pre={}){
     if (!(valor >= 0)) return $('#afErr').textContent = 'Informe o valor da doação.';
     const row = { nome: f.get('nome').trim(), cpf: doc || null, telefone: dig(f.get('telefone')) || null, endereco: f.get('endereco').trim() || null,
       valor_mensal: valor, dia_vencimento: Math.min(31, Math.max(1, +f.get('dia_vencimento')||DIA_VENC_PADRAO)),
-      inicio: (f.get('inicio') || hojeISO().slice(0,7)) + '-01', ativo: f.get('ativo')==='1', obs: f.get('obs').trim() || null };
+      inicio: (f.get('inicio') || hojeISO().slice(0,7)) + '-01', ativo: f.get('ativo')==='1', obs: f.get('obs').trim() || null,
+      categoria: f.get('categoria') || 'contribuinte' };
+    const antes = id ? S.afiliados.find(x=>x.id===id) : null;
+    const viraContribAtivo = row.ativo && row.categoria !== 'fundador' && !(antes && antes.ativo && antes.categoria !== 'fundador');
+    if (viraContribAtivo && contribAtivos() >= LIMITE_CONTRIB) return $('#afErr').textContent = `Limite de ${LIMITE_CONTRIB} sócios contribuintes atingido (Art. 9º). Ele só pode ser aumentado em assembleia.`;
     if (doc && S.afiliados.some(x => x.id!==id && dig(x.cpf)===doc)) return $('#afErr').textContent = 'Já existe afiliado com esse CPF/CNPJ.';
     try {
       let novoId = id;
@@ -725,6 +737,7 @@ function abrirAf(id){
     ${temDivida(s) ? `<div class="card" style="background:var(--${cor}-soft);border:0;margin-top:10px"><b style="color:var(--${cor})">Em aberto: <span class="val">${brl(s.deve)}</span></b><div class="muted">Pago até ${compTxt(s.pagoAte)} · ${s.txt}</div></div>` : ''}
     <dl class="kv">
       <dt>Doação</dt><dd class="val">${brl(a.valor_mensal)} / mês · vence dia ${a.dia_vencimento}</dd>
+      <dt>Categoria</dt><dd>${a.categoria==='fundador'?'Fundador':'Contribuinte'}</dd>
       <dt>Cobrar desde</dt><dd>${compTxt({y:+a.inicio.slice(0,4), m:+a.inicio.slice(5,7)})}</dd>
       <dt>Pago até</dt><dd>${compTxt(s.pagoAte)}</dd>
       <dt>Total pago</dt><dd class="val">${brl(s.pago)}</dd>
@@ -744,7 +757,7 @@ function abrirAf(id){
         <div class="row"><b class="grow">Renovação ${ANO_RENOV}</b><span class="badge ${r?'b-emdia':'b-mute'}">${r?'Renovado':'Não renovou'}</span></div>
         ${r ? `<div class="muted" style="margin-top:4px">Renovou em ${fdata(r.criado_em)}${r.forma_pagamento?' · prefere '+esc(r.forma_pagamento):''}${r.email?' · '+esc(r.email):''}${r.nascimento?' · nasc. '+fdata(r.nascimento):''}</div>${r.obs?`<div class="muted">Obs.: ${esc(r.obs)}</div>`:''}` : ''}
         <div class="row" style="margin-top:10px;flex-wrap:wrap">
-          <a class="btn sm acc grow" style="text-decoration:none" href="${w2}" target="_blank" rel="noopener">${IC.wa} Enviar link de renovação</a>
+          <a class="btn sm acc grow" style="text-decoration:none" href="${w2}" target="_blank" rel="noopener">${IC.wa} Enviar página do afiliado</a>
           <button class="btn sm ghost" onclick="copiarRenov(${id})">Copiar link</button></div></div>`; })()}
     <div class="sec-h"><h2 style="font-size:18px">Pagamentos</h2><span class="muted">${pags.length}</span></div>
     ${pags.length ? `<div class="list">${pags.map(m=>`<div class="li" onclick="formMov(${m.id})"><div class="grow"><div class="t">${fdata(m.data)}</div><div class="s">${esc(m.descricao)}${m.origem==='extrato'?' · extrato':''}</div></div><div class="v pos val">${brl(m.valor)}</div></div>`).join('')}</div>` : '<div class="card empty">Nenhum pagamento ainda.</div>'}
@@ -785,8 +798,25 @@ function formDesligar(id){
   });
 }
 async function reativarAf(id){
-  if (!(await confirmar('Reativar este afiliado?', 'Ele volta para a lista de ativos e passa a ser cobrado de novo.', 'Reativar'))) return;
-  try { await DB.upd('afiliados', {id}, { ativo:true, desligado_em:null, desligado_motivo:null, desligado_obs:null });
+  const a = S.afiliados.find(x=>x.id===id); const mot = a.desligado_motivo;
+  // Art. 16 do estatuto
+  if ((a.readmissoes||0) >= 1 && (mot === 'Falta de pagamento' || mot === 'Desistência'))
+    return confirmar('Readmissão não permitida', 'Pelo Art. 16 do estatuto, o sócio só pode ser readmitido uma única vez, e ele já foi readmitido antes.', 'Entendi');
+  if (mot === 'Falta de pagamento'){
+    const anoDes = (a.desligado_em||'').slice(0,4);
+    if (anoDes && anoDes !== String(new Date().getFullYear()))
+      return confirmar('Readmissão não permitida', `Pelo Art. 16, I, quem foi desligado por falta de pagamento só pode ser readmitido no mesmo ano do desligamento (${anoDes}).`, 'Entendi');
+    const s = statusAf({...a, ativo:true});
+    if (temDivida(s))
+      return confirmar('Falta quitar as mensalidades', `Pelo Art. 16, I, para ser readmitido ele precisa quitar todo o período em atraso: ${brl(s.deve)}. Registre o pagamento na ficha dele e depois reative.`, 'Entendi');
+  }
+  if (mot === 'Impedimento pelo estatuto')
+    return confirmar('Readmissão não permitida', 'O estatuto não prevê readmissão para desligamento por impedimento (Art. 16 e 17). Se for um caso especial, a decisão é da Diretoria; fale comigo para ajustar.', 'Entendi');
+  if (a.categoria !== 'fundador' && contribAtivos() >= LIMITE_CONTRIB)
+    return confirmar('Limite de sócios atingido', `Já há ${LIMITE_CONTRIB} sócios contribuintes ativos (Art. 9º).`, 'Entendi');
+  const aviso = mot ? 'Pelo estatuto, a readmissão é a juízo da Diretoria e só pode acontecer uma única vez.' : 'Ele volta para a lista de ativos e passa a ser cobrado de novo.';
+  if (!(await confirmar('Reativar este afiliado?', aviso, 'Reativar'))) return;
+  try { await DB.upd('afiliados', {id}, { ativo:true, desligado_em:null, desligado_motivo:null, desligado_obs:null, readmissoes: (a.readmissoes||0) + (mot ? 1 : 0) });
     await carregar('afiliados'); toast('Afiliado reativado'); render(); abrirAf(id); } catch(e){ toast(erroMsg(e)); }
 }
 
@@ -800,8 +830,41 @@ function vMais(){
   $('#view').innerHTML = `<div class="list">
     ${item('indicacoes', IC.star, 'Indicações de novos afiliados', pend ? `${pend} aguardando aprovação` : 'Cadastre indicações com foto')}
     ${item('estatuto', IC.doc, 'Estatuto', est ? 'Ver o estatuto da associação' : 'Nenhum estatuto enviado ainda')}
+    ${item('votantes', IC.users, 'Assembleia: sócios com direito a voto', 'Lista do Art. 32, só com quem está quite')}
     ${item('importar', IC.up, 'Importar extrato', 'Excel, CSV ou PDF do banco')}
   </div>`;
+}
+
+/* =====================================================================
+   ASSEMBLEIA — LISTA DE SÓCIOS COM DIREITO A VOTO (Art. 29 e 32)
+   ===================================================================== */
+function vVotantes(){
+  const ativos = S.afiliados.filter(a=>a.ativo).map(a=>({a, s:statusAf(a)}));
+  const quites = ativos.filter(x=>!temDivida(x.s)).map(x=>x.a).sort((x,y)=>x.nome.localeCompare(y.nome,'pt-BR'));
+  const fora = ativos.length - quites.length;
+  const hoje = new Date().toLocaleDateString('pt-BR');
+  window._votTexto = `ASSOCIAÇÃO MASTODONTE\nRelação nominal dos sócios com direito a voto (Art. 32 do estatuto)\nAtualizada em ${hoje}\n\n` +
+    quites.map((a,i)=>`${i+1}. ${a.nome}`).join('\n') +
+    `\n\nQuem não está na relação por débito com a Tesouraria pode regularizar a situação até 24 horas antes da Assembleia (Art. 32, parágrafo único).`;
+  $('#view').innerHTML = `
+    <button class="btn ghost sm" onclick="ir('mais')">‹ Voltar</button>
+    <div class="sec-h"><h2>Sócios com direito a voto</h2><span class="badge b-emdia">${quites.length}</span></div>
+    <div class="card"><p class="muted" style="margin:0">O Art. 32 manda publicar esta relação nos 5 dias antes da Assembleia. Ela traz <b>só os nomes de quem está quite</b> (${quites.length}), sem CPF e sem citar quem deve. ${fora} sócio${fora!==1?'s':''} com mensalidade em aberto fica${fora!==1?'m':''} de fora e pode${fora!==1?'m':''} regularizar até 24 h antes.</p>
+      <p class="muted" style="margin:8px 0 0">O estatuto também exige ser maior de 18 anos para votar (Art. 29). Confira isso na hora da assinatura da lista de presença.</p>
+      <div class="row" style="margin-top:12px;flex-wrap:wrap"><button class="btn acc grow" onclick="copiarVotantes()">Copiar lista</button><button class="btn ghost grow" onclick="baixarVotantes()">Baixar planilha</button></div></div>
+    <div class="list" style="margin-top:12px">${quites.map((a,i)=>`<div class="li" style="cursor:default"><span class="muted" style="width:28px">${i+1}</span><div class="grow"><div class="t">${esc(a.nome)}</div></div>${a.categoria==='fundador'?'<span class="badge b-acc">fundador</span>':''}</div>`).join('')}</div>`;
+}
+async function copiarVotantes(){
+  try { await navigator.clipboard.writeText(window._votTexto); toast('Lista copiada. Cole no grupo ou no edital.'); }
+  catch(e){ prompt('Copie a lista:', window._votTexto); }
+}
+async function baixarVotantes(){
+  try { if (!window.XLSX) await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
+    const quites = S.afiliados.filter(a=>a.ativo && !temDivida(statusAf(a))).sort((x,y)=>x.nome.localeCompare(y.nome,'pt-BR'));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(quites.map((a,i)=>({ 'Nº': i+1, Nome: a.nome, Categoria: a.categoria==='fundador'?'Fundador':'Contribuinte', Assinatura: '' }))), 'Direito a voto');
+    XLSX.writeFile(wb, `socios-com-direito-a-voto-${hojeISO()}.xlsx`);
+  } catch(e){ toast(erroMsg(e)); }
 }
 
 /* =====================================================================
@@ -869,14 +932,14 @@ async function vIndicacoes(){
 }
 function formIndicacao(){
   const opsAf = S.afiliados.filter(a=>a.ativo).sort((a,b)=>a.nome.localeCompare(b.nome));
-  abrirSheet(`<h3>Nova indicação</h3><p class="muted">Preencha os dados da pessoa indicada. Peça a autorização dela para tirar a foto e guardar os dados.</p>
+  abrirSheet(`<h3>Nova indicação</h3><p class="muted">${contribAtivos()} de ${LIMITE_CONTRIB} vagas de contribuinte ocupadas. Preencha os dados da pessoa indicada. Peça a autorização dela para tirar a foto e guardar os dados.</p>
   <form class="f" id="fInd">
     <label>Foto do rosto *</label>
     <div class="row"><div id="indPrev" class="avatar" style="width:72px;height:72px">📷</div>
       <input type="file" name="foto" accept="image/*" required class="grow"></div>
     <label>Nome completo *</label><input name="nome" required autocomplete="off">
     <div class="g2"><div><label>CPF *</label><input name="cpf" inputmode="numeric" required placeholder="000.000.000-00"></div>
-    <div><label>Nascimento</label><input name="nasc" type="date"></div></div>
+    <div><label>Nascimento *</label><input name="nasc" type="date" required></div></div>
     <div class="g2"><div><label>Telefone (WhatsApp)</label><input name="tel" inputmode="tel" placeholder="(17) 99999-9999"></div>
     <div><label>E-mail</label><input name="email" type="email" inputmode="email"></div></div>
     <label>Endereço</label><input name="end" placeholder="Rua, número, bairro, cidade">
@@ -891,6 +954,9 @@ function formIndicacao(){
     ev.preventDefault(); const f = new FormData(ev.target); const err = $('#indErr');
     const cpf = dig(f.get('cpf'));
     if (!cpfOk(cpf)) return err.textContent = 'CPF inválido — confira os números.';
+    const id18 = idade(f.get('nasc'));
+    if (id18 === null) return err.textContent = 'Informe a data de nascimento.';
+    if (id18 < 18) return err.textContent = `A pessoa tem ${id18} anos. Pelo Art. 15, II do estatuto, só pode ser admitido quem é maior de 18 anos (ou emancipado legalmente).`;
     if (S.afiliados.some(a=>dig(a.cpf)===cpf)) return err.textContent = 'Já existe um afiliado com esse CPF.';
     if (S.indicacoes.some(i=>dig(i.cpf)===cpf && i.status==='pendente')) return err.textContent = 'Já existe uma indicação pendente com esse CPF.';
     const foto = ev.target.querySelector('[name=foto]').files[0];
@@ -928,10 +994,12 @@ function abrirIndicacao(id){
 async function aprovarIndicacao(id){
   const i = S.indicacoes.find(x=>x.id===id);
   if (S.afiliados.some(a=>dig(a.cpf)===dig(i.cpf))) return toast('Já existe um afiliado com esse CPF.');
+  if (contribAtivos() >= LIMITE_CONTRIB) return confirmar('Limite de sócios atingido', `Já há ${LIMITE_CONTRIB} sócios contribuintes ativos. Pelo Art. 9º, esse número só pode ser aumentado em assembleia.`, 'Entendi');
+  if (i.nascimento && idade(i.nascimento) < 18) return confirmar('Menor de 18 anos', 'Pelo Art. 15, II, só pode ser admitido quem é maior de 18 anos (ou emancipado legalmente).', 'Entendi');
   if (!(await confirmar('Aprovar indicação?', `${i.nome} será cadastrado como afiliado (R$ ${MENSALIDADE_PADRAO} por mês, vencimento dia ${DIA_VENC_PADRAO}, a partir deste mês).`, 'Aprovar'))) return;
   try {
     const novo = (await DB.ins('afiliados', { nome: i.nome, cpf: i.cpf, telefone: i.telefone, endereco: i.endereco, foto: i.foto,
-      valor_mensal: MENSALIDADE_PADRAO, dia_vencimento: DIA_VENC_PADRAO, inicio: hojeISO().slice(0,7)+'-01', ativo: true,
+      valor_mensal: MENSALIDADE_PADRAO, dia_vencimento: DIA_VENC_PADRAO, inicio: hojeISO().slice(0,7)+'-01', ativo: true, categoria: 'contribuinte',
       obs: [i.indicado_por ? 'Indicado por ' + i.indicado_por : null, i.email ? 'E-mail: ' + i.email : null, i.nascimento ? 'Nascimento: ' + fdata(i.nascimento) : null].filter(Boolean).join(' · ') || null }))[0];
     await DB.upd('indicacoes', {id}, { status:'aprovada', afiliado_id: novo?.id || null });
     await carregar('afiliados','indicacoes'); toast('Afiliado cadastrado'); render(); abrirIndicacao(id);
