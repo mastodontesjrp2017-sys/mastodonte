@@ -197,7 +197,7 @@ nav.tabs button.on{color:var(--accent)}
    Vazio = MODO DEMONSTRAÇÃO (dados ficam só no aparelho).
    ===================================================================== */
 const CFG = { url: 'https://cknzysljezvpazonvibb.supabase.co', key: 'sb_publishable_ji48PdmWNR5nvQkXMhbbCQ_DEekbpVL' };
-const VERSAO = 'v7';
+const VERSAO = 'v8';
 const DEMO = !CFG.url || !CFG.key;
 const sb = DEMO ? null : supabase.createClient(CFG.url, CFG.key);
 
@@ -379,6 +379,30 @@ const transIni = () => (S.configuracoes.find(c => c.chave === 'transparencia_ini
 const contribAtivos = () => S.afiliados.filter(a => a.ativo && a.categoria !== 'fundador').length;
 const idade = iso => { if (!iso) return null; const n = new Date(iso+'T12:00'), h = new Date(); let i = h.getFullYear()-n.getFullYear();
   if (h.getMonth()<n.getMonth() || (h.getMonth()===n.getMonth() && h.getDate()<n.getDate())) i--; return i; };
+// Situação mês a mês: os pagamentos quitam primeiro os meses mais antigos
+function mesesAf(a, hoje = new Date()){
+  const v = a.valor_mensal; if (!(v > 0) || !a.inicio) return [];
+  const pago = S.movimentos.filter(m => m.afiliado_id === a.id && m.valor > 0).reduce((s,m)=>s+m.valor,0);
+  const cob = Math.floor((pago + 0.005) / v);
+  const [y0,m0] = a.inicio.split('-').map(Number);
+  const h0 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+  const fimN = Math.max((hoje.getFullYear()-y0)*12 + hoje.getMonth()+1 - m0, cob - 1);
+  const out = [];
+  for (let n = 0; n <= fimN; n++){
+    const t = (m0-1)+n, y = y0 + Math.floor(t/12), m = (t%12)+1;
+    const venc = new Date(y, m-1, Math.min(a.dia_vencimento||DIA_VENC_PADRAO, new Date(y, m, 0).getDate()));
+    out.push({ y, m, k: n < cob ? 'pago' : venc < h0 ? 'aberto' : 'avencer' });
+  }
+  return out;
+}
+function gradeMeses(lista){
+  if (!lista.length) return '';
+  const anos = [...new Set(lista.map(x=>x.y))];
+  const COR = { pago:'background:var(--ok-soft);color:var(--ok)', aberto:'background:var(--bad-soft);color:var(--bad)', avencer:'background:var(--mute-soft);color:var(--ink3)' };
+  const TXT = { pago:'pago', aberto:'em aberto', avencer:'a vencer' };
+  return anos.map(y => `<div style="margin-top:10px"><b>${y}</b><div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:6px">
+    ${lista.filter(x=>x.y===y).map(x=>`<div style="${COR[x.k]};border-radius:10px;padding:7px 4px;text-align:center;font-size:13px;font-weight:700">${MESES[x.m-1]}<br><span style="font-weight:600;font-size:11.5px">${x.k==='pago'?'✓ ':''}${TXT[x.k]}</span></div>`).join('')}</div></div>`).join('');
+}
 const temDivida = s => s && (s.k==='atraso' || s.k==='pendente');
 const compTxt = c => c ? `${MESES[c.m-1]}/${c.y}` : '—';
 const BADGE = {atraso:'b-atraso', pendente:'b-pend', vence:'b-vence', emdia:'b-emdia', inativo:'b-mute', livre:'b-mute'};
@@ -737,6 +761,7 @@ function abrirAf(id){
       <div class="muted">Motivo: ${esc(a.desligado_motivo)}${a.desligado_obs?' · '+esc(a.desligado_obs):''}</div>
       ${ehAdm()||DEMO?`<button class="btn sm ghost" style="margin-top:8px" onclick="reativarAf(${id})">Reativar afiliado</button>`:''}</div>` : ''}
     ${temDivida(s) ? `<div class="card" style="background:var(--${cor}-soft);border:0;margin-top:10px"><b style="color:var(--${cor})">Em aberto: <span class="val">${brl(s.deve)}</span></b><div class="muted">Pago até ${compTxt(s.pagoAte)} · ${s.txt}</div></div>` : ''}
+    ${a.ativo && a.valor_mensal > 0 ? `<div class="card" style="margin-top:10px;padding:10px 14px"><b>Mês a mês</b>${gradeMeses(mesesAf(a))}</div>` : ''}
     <dl class="kv">
       <dt>Doação</dt><dd class="val">${brl(a.valor_mensal)} / mês · vence dia ${a.dia_vencimento}</dd>
       <dt>Categoria</dt><dd>${a.categoria==='fundador'?'Fundador':'Contribuinte'}</dd>
@@ -1496,7 +1521,7 @@ function abrirConfig(){
     ${adm ? `<div class="sec-h"><h2 style="font-size:18px">Quem pode acessar</h2></div>
       <div class="list">${S.usuarios.map(u=>`<div class="li" style="cursor:default"><div class="grow"><div class="t">${esc(u.nome)}</div><div class="s">${esc(u.email)}</div></div>
         <span class="badge ${u.papel==='adm'?'b-acc':'b-mute'}">${u.papel==='adm'?'adm':'financeiro'}</span>
-        ${u.email!==S.me.email?`<button class="btn sm ${u.ativo?'ghost':'danger'}" onclick="uTog('${esc(u.email)}',${!u.ativo})">${u.ativo?'Bloquear':'Liberar'}</button>`:''}</div>`).join('')}</div>
+        ${u.email!==S.me.email?`<button class="btn sm ${u.ativo?'ghost':'danger'}" onclick="uTog('${esc(u.email)}',${!u.ativo})">${u.ativo?'Bloquear':'Liberar'}</button><button class="btn sm danger" aria-label="Excluir acesso" onclick="uDel('${esc(u.email)}')">Excluir</button>`:''}</div>`).join('')}</div>
       <form class="f" id="fU"><label>Liberar novo acesso</label>
         <input name="nome" placeholder="Nome" required><div class="g2" style="margin-top:8px"><input name="email" type="email" placeholder="E-mail" required>
         <select name="papel"><option value="financeiro">Financeiro (só pagamentos e saídas, sem CPF)</option><option value="adm">Administrador (tudo)</option></select></div>
@@ -1518,6 +1543,13 @@ function abrirConfig(){
     const email = f.get('email').trim().toLowerCase();
     if (S.usuarios.some(u=>u.email===email)) return toast('Esse e-mail já está na lista.');
     try { await DB.ins('usuarios',{email, nome:f.get('nome').trim(), papel:f.get('papel'), ativo:true}); await carregar('usuarios'); toast('Acesso liberado'); abrirConfig(); } catch(e){ toast(erroMsg(e)); } });
+}
+async function uDel(email){
+  const u = S.usuarios.find(x=>x.email===email);
+  if (!(await confirmar('Excluir acesso ao app?', `${u?.nome||email} não vai mais conseguir entrar no app, e a conta de login dele será apagada. Se precisar, você pode liberar o acesso de novo depois.`, 'Excluir'))) return;
+  try { if (DEMO){ await DB.del('usuarios',{email}); }
+    else { const { error } = await sb.rpc('excluir_usuario', { p_email: email }); if (error) throw error; }
+    await carregar('usuarios'); toast('Acesso excluído'); abrirConfig(); } catch(e){ toast(erroMsg(e)); }
 }
 async function uTog(email, ativo){ try { await DB.upd('usuarios',{email},{ativo}); await carregar('usuarios'); abrirConfig(); } catch(e){ toast(erroMsg(e)); } }
 async function exportar(){
