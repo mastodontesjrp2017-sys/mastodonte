@@ -1472,8 +1472,7 @@ function vImpPreview(){
   const I = S.imp; const L = I.linhas;
   const c = k => L.filter(l=>l.k===k);
   const novas = L.filter(l=>l.k!=='dup');
-  const F = [['identificar','A identificar',[...c('sug'),...c('nid')]],['baixas','Baixas',[...c('cpf'),...c('ok')]],['saidas','Saídas',c('sai')],...(c('man').length?[['man','Já lançados à mão?',c('man')]]:[]),['todas','Todas',L]];
-  if (!F.some(f=>f[0]===S.impFiltro)) S.impFiltro = 'identificar';
+  const F = [['identificar','A identificar',[...c('sug'),...c('nid')]],['baixas','Baixas',[...c('cpf'),...c('ok')]],['saidas','Saídas',c('sai')],['todas','Todas',L]];
   const atual = F.find(f=>f[0]===S.impFiltro)[2];
   const totSel = novas.filter(l=>l.on);
   const ini = L.reduce((a,l)=>l.data<a?l.data:a, '9'), fim = L.reduce((a,l)=>l.data>a?l.data:a, '0');
@@ -1484,7 +1483,7 @@ function vImpPreview(){
         <div class="card kpi ok"><small>Baixa por CPF</small><b>${c('cpf').length + c('ok').length}</b></div>
         <div class="card kpi"><small>A identificar</small><b>${c('sug').length + c('nid').length}</b><span class="muted">${c('sug').length} com sugestão</span></div>
         <div class="card kpi"><small>Saídas</small><b>${c('sai').length}</b></div>
-        <div class="card kpi"><small>Já importadas</small><b>${c('dup').length}</b>${c('man').length?`<span class="muted">+${c('man').length} já lançada${c('man').length>1?'s':''} à mão?</span>`:''}</div>
+        <div class="card kpi"><small>Já importadas</small><b>${c('dup').length}</b></div>
       </div></div>
     <div class="chips" style="margin-top:12px">${F.map(([k,n,arr])=>`<button class="chip ${S.impFiltro===k?'on':''}" onclick="S.impFiltro='${k}';vImpPreview()">${n}<span class="n">${arr.length}</span></button>`).join('')}</div>
     <div class="list" style="margin-top:8px">${atual.length ? atual.slice(0,400).map(l=>linhaImp(l, L.indexOf(l))).join('') : '<div class="empty">Nada aqui.</div>'}</div>
@@ -1504,7 +1503,7 @@ function linhaImp(l, i){
       <optgroup label="Mensalidade de…">${opsAf.map(a=>`<option value="a:${a.id}" ${a.id===l.afiliado_id?'selected':''}>${esc(a.nome)}</option>`).join('')}</optgroup></select>
     ${sa || (l.documento && !l.afiliado_id) ? `<div class="sug">${sa?`<button class="btn sm" style="background:var(--warn);color:#fff" onclick="impDest(${i},'a:${sa.id}')">É ${esc(sa.nome.split(' ').slice(0,2).join(' '))}?</button>`:''}
       ${l.documento && !l.afiliado_id ? `<button class="btn sm ghost" onclick="impNovoAf(${i})">${IC.plus} Cadastrar afiliado</button>`:''}</div>`:''}`;
-  return `<div class="imp ${l.k==='dup'?'dup':l.k==='cpf'||l.k==='ok'?'k-cpf':l.k==='sug'||l.k==='man'?'k-sug':''}">
+  return `<div class="imp ${l.k==='dup'?'dup':l.k==='cpf'||l.k==='ok'?'k-cpf':l.k==='sug'?'k-sug':''}">
     <input type="checkbox" ${l.on?'checked':''} ${l.k==='dup'?'disabled':''} onchange="S.imp.linhas[${i}].on=this.checked;vImpPreview()">
     <div style="min-width:0"><div class="top2"><b style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.nome || l.descricao)}</b><b class="val ${l.valor>0?'pos':'neg'}" style="white-space:nowrap">${brl(l.valor)}</b></div>
     <div class="d">${fdata(l.data)}${l.nome?' · '+esc(l.descricao):''}${l.documento?' · '+fmtDoc(l.documento):''}</div>${destino}</div></div>`;
@@ -1525,14 +1524,12 @@ async function confirmarImp(){
     categoria: l.afiliado_id ? 'Mensalidade' : l.categoria, afiliado_id: l.valor>0 ? (l.afiliado_id||null) : null, origem:'extrato', chave:l.chave }));
   try {
     const ins = await DB.ins('movimentos', rows, true);
-    const ligar = S.imp.linhas.filter(l => l.k==='man' && !l.on && l.man);
-    for (const l of ligar) { try { await DB.upd('movimentos', {id:l.man.id}, { chave: l.chave, documento: l.documento || null }); } catch(e){} }
     await carregar('movimentos');
     const baixas = rows.filter(r=>r.afiliado_id).length;
     S.imp = null;
     abrirSheet(`<h3>Importação concluída ✔</h3>
       <dl class="kv"><dt>Lançamentos gravados</dt><dd>${ins.length}</dd><dt>Baixas de mensalidade</dt><dd>${baixas}</dd>
-      <dt>Saídas</dt><dd>${rows.filter(r=>r.valor<0).length}</dd>${rows.length-ins.length?`<dt>Ignorados (já existiam)</dt><dd>${rows.length-ins.length}</dd>`:''}${ligar.length?`<dt>Ligados a lançamentos feitos à mão</dt><dd>${ligar.length}</dd>`:''}</dl>
+      <dt>Saídas</dt><dd>${rows.filter(r=>r.valor<0).length}</dd>${rows.length-ins.length?`<dt>Ignorados (já existiam)</dt><dd>${rows.length-ins.length}</dd>`:''}</dl>
       <div class="row" style="margin-top:16px"><button class="btn ghost grow" onclick="fecharSheet();ir('financeiro')">Ver financeiro</button><button class="btn acc grow" onclick="fecharSheet();S.filtroAf='atraso';ir('afiliados')">Ver atrasados</button></div>`);
     vImportar();
   } catch(e){ toast(erroMsg(e), 4000); btn.disabled=false; btn.textContent='Tentar de novo'; }
