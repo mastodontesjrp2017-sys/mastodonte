@@ -57,8 +57,8 @@ main{max-width:860px;margin:0 auto;padding:14px 16px}
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--card);border-top:1px solid var(--line);
   display:flex;justify-content:space-around;padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
 nav.tabs button{flex:1;background:none;border:0;display:flex;flex-direction:column;align-items:center;gap:3px;
-  font-size:12.5px;color:var(--ink3);padding:6px 0;cursor:pointer;font-weight:700}
-nav.tabs button svg{width:26px;height:26px}
+  font-size:11.5px;color:var(--ink3);padding:6px 0;cursor:pointer;font-weight:700;min-width:0}
+nav.tabs button svg{width:24px;height:24px}
 nav.tabs button.on{color:var(--accent)}
 /* ---------- elementos ---------- */
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:14px}
@@ -197,7 +197,7 @@ nav.tabs button.on{color:var(--accent)}
    Vazio = MODO DEMONSTRAÇÃO (dados ficam só no aparelho).
    ===================================================================== */
 const CFG = { url: 'https://cknzysljezvpazonvibb.supabase.co', key: 'sb_publishable_ji48PdmWNR5nvQkXMhbbCQ_DEekbpVL' };
-const VERSAO = 'v11';
+const VERSAO = 'v12';
 const DEMO = !CFG.url || !CFG.key;
 const sb = DEMO ? null : supabase.createClient(CFG.url, CFG.key);
 
@@ -263,9 +263,9 @@ const IC = {
 };
 
 /* ---------------- banco de dados (Supabase ou local) ---------------- */
-const TABELAS = ['afiliados','movimentos','eventos','evento_tarefas','usuarios','renovacoes','documentos','indicacoes','configuracoes'];
+const TABELAS = ['afiliados','movimentos','eventos','evento_tarefas','usuarios','renovacoes','documentos','indicacoes','configuracoes','reunioes','planejamento'];
 // CPF, documento e link de renovação não vêm nessas colunas: só o administrador recebe, à parte
-const COLS = { afiliados:'id,nome,telefone,endereco,valor_mensal,dia_vencimento,inicio,ativo,obs,criado_em,categoria,tamanho_camisa',
+const COLS = { afiliados:'id,nome,telefone,endereco,valor_mensal,dia_vencimento,inicio,ativo,obs,criado_em,categoria,tamanho_camisa,cobrar_ate',
   movimentos:'id,data,descricao,nome,valor,categoria,afiliado_id,evento_id,origem,chave,criado_por,criado_em,obs,comprovante,descricao_publica,anexos' };
 const ehAdm = () => S.me && S.me.papel === 'adm';
 const ehFin = () => S.me && S.me.papel !== 'adm';
@@ -322,14 +322,14 @@ function erroMsg(e){ const m = e?.message || String(e);
   return m; }
 
 /* ---------------- estado ---------------- */
-const S = { me:null, tab: LS.get('masto_tab','inicio'), afiliados:[], movimentos:[], eventos:[], tarefas:[], usuarios:[], renovacoes:[], documentos:[], indicacoes:[], configuracoes:[],
+const S = { me:null, tab: LS.get('masto_tab','inicio'), afiliados:[], movimentos:[], eventos:[], tarefas:[], usuarios:[], renovacoes:[], documentos:[], indicacoes:[], configuracoes:[], reunioes:[], planejamento:[],
   filtroAf:'todos', buscaAf:'', mesFin: hojeISO().slice(0,7), tipoFin:'saida', imp:null, impFiltro:'identificar', priv: LS.get('masto_priv',false) };
 
 async function carregar(...tabs){
   tabs = tabs.length ? tabs : TABELAS;
-  if (!DEMO && !ehAdm()) tabs = tabs.filter(t => t !== 'renovacoes' && t !== 'indicacoes');
-  const map = {afiliados:'afiliados', movimentos:'movimentos', eventos:'eventos', evento_tarefas:'tarefas', usuarios:'usuarios', renovacoes:'renovacoes', documentos:'documentos', indicacoes:'indicacoes', configuracoes:'configuracoes'};
-  await Promise.all(tabs.map(async t => { try { S[map[t]] = await DB.all(t); } catch(e){ if (['renovacoes','documentos','indicacoes','configuracoes'].includes(t)) S[map[t]] = []; else throw e; } }));
+  if (!DEMO && !ehAdm()) tabs = tabs.filter(t => !['renovacoes','indicacoes','reunioes','planejamento'].includes(t));
+  const map = {afiliados:'afiliados', movimentos:'movimentos', eventos:'eventos', evento_tarefas:'tarefas', usuarios:'usuarios', renovacoes:'renovacoes', documentos:'documentos', indicacoes:'indicacoes', configuracoes:'configuracoes', reunioes:'reunioes', planejamento:'planejamento'};
+  await Promise.all(tabs.map(async t => { try { S[map[t]] = await DB.all(t); } catch(e){ if (['renovacoes','documentos','indicacoes','configuracoes','reunioes','planejamento'].includes(t)) S[map[t]] = []; else throw e; } }));
   if (!DEMO && ehAdm()){
     if (tabs.includes('afiliados')){
       const { data } = await sb.rpc('afiliados_privado');
@@ -359,7 +359,8 @@ function statusAf(a, hoje = new Date()){
   const h0 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
   const venc = (y,m) => new Date(y, m-1, Math.min(a.dia_vencimento||DIA_VENC_PADRAO, new Date(y, m, 0).getDate()));
   let y=y0, m=m0, vencidas=0;
-  while (y < hoje.getFullYear() || (y===hoje.getFullYear() && m <= hoje.getMonth()+1)) {
+  const ate = a.cobrar_ate ? a.cobrar_ate.slice(0,7) : null;
+  while ((y < hoje.getFullYear() || (y===hoje.getFullYear() && m <= hoje.getMonth()+1)) && (!ate || `${y}-${String(m).padStart(2,'0')}` <= ate)) {
     if (venc(y,m) < h0) vencidas++;
     m++; if (m>12){m=1;y++;}
   }
@@ -388,7 +389,8 @@ function mesesAf(a, hoje = new Date()){
   const cob = Math.floor((pago + 0.005) / v);
   const [y0,m0] = a.inicio.split('-').map(Number);
   const h0 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
-  const fimN = Math.max((hoje.getFullYear()-y0)*12 + hoje.getMonth()+1 - m0, cob - 1);
+  let fimN = Math.max((hoje.getFullYear()-y0)*12 + hoje.getMonth()+1 - m0, cob - 1);
+  if (a.cobrar_ate){ const [ya,ma] = a.cobrar_ate.split('-').map(Number); fimN = Math.min(fimN, Math.max((ya-y0)*12 + ma - m0, cob - 1)); }
   const out = [];
   for (let n = 0; n <= fimN; n++){
     const t = (m0-1)+n, y = y0 + Math.floor(t/12), m = (t%12)+1;
@@ -420,7 +422,15 @@ function waLink(a, st){
 
 /* ---------------- renovação 2027 ---------------- */
 const ANO_RENOV = 2027;
-const renovou = a => S.renovacoes.find(r => r.afiliado_id === a.id && r.ano === ANO_RENOV);
+const regRenov = a => S.renovacoes.find(r => r.afiliado_id === a.id && r.ano === ANO_RENOV);
+const renovou = a => { const r = regRenov(a); return r && r.decisao !== 'nao_renovar' ? r : null; };
+const naoRenova = a => { const r = regRenov(a); return r && r.decisao === 'nao_renovar' ? r : null; };
+async function desfazerNaoRenova(id){
+  const a = S.afiliados.find(x=>x.id===id); const r = naoRenova(a); if (!r) return;
+  if (!(await confirmar('Desfazer a decisão?', `${a.nome} volta a ficar "sem resposta" e continua sendo cobrado normalmente em ${ANO_RENOV}.`, 'Desfazer'))) return;
+  try { await DB.del('renovacoes', {id: r.id}); await DB.upd('afiliados', {id}, {cobrar_ate: null});
+    await carregar('renovacoes','afiliados'); toast('Decisão desfeita'); render(); abrirAf(id); } catch(e){ toast(erroMsg(e)); }
+}
 function linkRenov(a){ if (!a.token_renovacao) return null;
   return location.origin + location.pathname.replace(/[^/]*$/, '') + 'renovacao.html?t=' + a.token_renovacao; }
 function waRenov(a){
@@ -562,12 +572,12 @@ async function sair(){ if (DEMO) LS.set('masto_demo_on', false); else await sb.a
    ===================================================================== */
 const ABAS = [
   ['inicio','Início',IC.home], ['afiliados','Afiliados',IC.users], ['financeiro','Financeiro',IC.money],
-  ['eventos','Eventos',IC.cal], ['mais','Mais',IC.more] ];
+  ['agenda','Agenda',IC.cal], ['plano','Plano',IC.doc], ['mais','Mais',IC.more] ];
 const ABAS_FIN = [ ['financeiro','Financeiro',IC.money], ['estatuto','Estatuto',IC.doc] ];
 const abasDoPerfil = () => ehAdm() || DEMO ? ABAS : ABAS_FIN;
 // telas que ficam dentro de "Mais"
-const DENTRO_MAIS = ['importar','estatuto','indicacoes','votantes'];
-const VIEWS = () => ({inicio:vInicio, afiliados:vAfiliados, financeiro:vFinanceiro, eventos:vEventos, mais:vMais, importar:vImportar, estatuto:vEstatuto, indicacoes:vIndicacoes, votantes:vVotantes});
+const DENTRO_MAIS = ['importar','estatuto','indicacoes','votantes','eventos'];
+const VIEWS = () => ({inicio:vInicio, afiliados:vAfiliados, financeiro:vFinanceiro, eventos:()=>{ S.agTab='eventos'; vAgenda(); }, agenda:vAgenda, plano:vPlano, mais:vMais, importar:vImportar, estatuto:vEstatuto, indicacoes:vIndicacoes, votantes:vVotantes});
 const podeVer = k => abasDoPerfil().some(([x]) => x === k) || ((ehAdm() || DEMO) && DENTRO_MAIS.includes(k));
 async function abrirApp(){
   document.body.classList.toggle('priv', S.priv);
@@ -583,14 +593,14 @@ async function abrirApp(){
     <main id="view"><div class="empty"><span class="spin"></span></div></main>
     <nav class="tabs">${abasDoPerfil().map(([k,n,i])=>`<button data-k="${k}" onclick="ir('${k}')">${i}<span>${n}</span></button>`).join('')}</nav>
     <div id="fabRoot"></div>`;
-  try { await carregar(); } catch(e){ $('#view').innerHTML = `<div class="card"><b>Erro ao carregar dados</b><p class="muted">${esc(erroMsg(e))}</p><button class="btn" onclick="abrirApp()">Tentar de novo</button></div>`; return; }
+  try { await carregar(); await desligarNaoRenovados(); } catch(e){ $('#view').innerHTML = `<div class="card"><b>Erro ao carregar dados</b><p class="muted">${esc(erroMsg(e))}</p><button class="btn" onclick="abrirApp()">Tentar de novo</button></div>`; return; }
   ir(S.tab);
 }
 function togglePriv(){ S.priv=!S.priv; LS.set('masto_priv',S.priv); document.body.classList.toggle('priv', S.priv); }
 function ir(k){
   if (!podeVer(k)) k = abasDoPerfil()[0][0];
   S.tab = k; LS.set('masto_tab', k);
-  const marca = DENTRO_MAIS.includes(k) && (ehAdm() || DEMO) ? 'mais' : k;
+  const marca = k==='eventos' ? 'agenda' : DENTRO_MAIS.includes(k) && (ehAdm() || DEMO) ? 'mais' : k;
   document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.toggle('on', b.dataset.k===marca));
   $('#fabRoot').innerHTML = '';
   (VIEWS()[k] || vInicio)();
@@ -643,7 +653,7 @@ function vInicio(){
     <div class="list">${pend.slice(0,30).map(({a,s})=>linhaAf(a,s,true)).join('')}</div>
     ${pend.length>30?`<button class="btn ghost wide" style="margin-top:8px" onclick="S.filtroAf='pendente';ir('afiliados')">Ver todos (${pend.length})</button>`:''}` : ''}
   ${vence.length ? `<div class="sec-h"><h2>Vencendo nos próximos dias</h2></div><div class="list">${vence.map(({a,s})=>linhaAf(a,s,true)).join('')}</div>` : ''}
-  ${ativos.length ? (()=>{ const nr = ativos.filter(a=>renovou(a)).length; return `<div class="card" style="margin-top:14px"><div class="row"><div class="grow"><b>Renovação ${ANO_RENOV}</b><div class="muted">${nr} de ${ativos.length} afiliados já renovaram</div></div></div>
+  ${ativos.length ? (()=>{ const nr = ativos.filter(a=>renovou(a)).length, nn = ativos.filter(a=>naoRenova(a)).length; return `<div class="card" style="margin-top:14px"><div class="row"><div class="grow"><b>Renovação ${ANO_RENOV}</b><div class="muted">${nr} renovaram · ${nn} não vão renovar · ${ativos.length-nr-nn} sem resposta</div></div></div>
     <div class="row" style="margin-top:10px"><button class="btn sm acc grow" onclick="abrirRenovados()">Ver renovados (${nr})</button><button class="btn sm ghost grow" onclick="S.filtroAf='nren';ir('afiliados')">Ver quem falta</button></div>
     <div class="bars" style="margin-top:10px"><div class="bt"><div class="bf" style="width:${(nr/ativos.length*100).toFixed(1)}%;background:var(--ok)"></div></div></div></div>`; })() : ''}
   ${naoId ? `<div class="card" style="margin-top:14px"><b>${naoId} boleto${naoId>1?'s':''} sem identificação</b><p class="muted" style="margin:4px 0 10px">O extrato do banco junta os boletos do dia sem dizer de quem é. Abra o boleto e toque em “Dar baixa em afiliados” para distribuir.</p><button class="btn sm ghost" onclick="S.tipoFin='naoid';ir('financeiro')">Ver boletos</button></div>` : ''}
@@ -677,14 +687,14 @@ function pFiltra(q){ q = norm(q); document.querySelectorAll('#pLista .li').forEa
    ===================================================================== */
 function vAfiliados(){
   const all = S.afiliados.map(a=>({a, s:statusAf(a)}));
-  const passa = (x,k) => k==='todos' ? x.a.ativo : k==='inativo' ? !x.a.ativo : k==='ren' ? x.a.ativo && !!renovou(x.a) : k==='nren' ? x.a.ativo && !renovou(x.a) : x.s.k===k;
+  const passa = (x,k) => k==='todos' ? x.a.ativo : k==='inativo' ? !x.a.ativo : k==='ren' ? x.a.ativo && !!renovou(x.a) : k==='saem' ? x.a.ativo && !!naoRenova(x.a) : k==='nren' ? x.a.ativo && !regRenov(x.a) : x.s.k===k;
   const cnt = k => all.filter(x => passa(x,k)).length;
   const q = norm(S.buscaAf), qd = dig(S.buscaAf);
   let lst = all.filter(x => passa(x, S.filtroAf));
   if (q) lst = lst.filter(x => norm(x.a.nome).includes(q) || (qd && (dig(x.a.cpf).includes(qd) || dig(x.a.telefone).includes(qd))));
   const ordem = {atraso:0, pendente:1, vence:2, emdia:3, livre:4, inativo:5};
   lst.sort((x,y)=> (ordem[x.s.k]-ordem[y.s.k]) || x.a.nome.localeCompare(y.a.nome));
-  const F = [['todos','Ativos'],['atraso','Em atraso'],['pendente','Pendentes'],['vence','Vencendo'],['emdia','Em dia'],['livre','Sem valor'],['ren','Renovaram '+ANO_RENOV],['nren','Não renovaram'],['inativo','Inativos']];
+  const F = [['todos','Ativos'],['atraso','Em atraso'],['pendente','Pendentes'],['vence','Vencendo'],['emdia','Em dia'],['livre','Sem valor'],['ren','Renovaram '+ANO_RENOV],['saem','Não vão renovar'],['nren','Sem resposta'],['inativo','Inativos']];
   $('#view').innerHTML = `
     <input class="search" placeholder="Buscar por nome, CPF ou telefone" value="${esc(S.buscaAf)}" oninput="S.buscaAf=this.value;clearTimeout(window._bt);window._bt=setTimeout(()=>{vAfiliados();const i=$('.search');i.focus();i.setSelectionRange(i.value.length,i.value.length)},250)">
     <div class="chips" style="margin-top:10px">${F.map(([k,n])=>`<button class="chip ${S.filtroAf===k?'on':''}" onclick="S.filtroAf='${k}';vAfiliados()">${n}<span class="n">${cnt(k)}</span></button>`).join('')}</div>
@@ -787,7 +797,10 @@ function abrirAf(id){
       <button class="btn ghost" onclick="formAf(${id})">Editar</button>
       ${a.ativo && (ehAdm()||DEMO) ? `<button class="btn danger" onclick="formDesligar(${id})">Desligar</button>` : ''}
     </div>
-    ${(()=>{ const r = renovou(a); const w2 = waRenov(a); if (!linkRenov(a) || !a.ativo) return '';
+    ${naoRenova(a) && a.ativo ? `<div class="card" style="margin-top:14px;background:var(--warn-soft);border:0"><div class="row"><b class="grow">Não vai renovar para ${ANO_RENOV}</b><span class="badge b-vence">sai em 31/12</span></div>
+      <div class="muted" style="margin-top:4px">Avisou em ${fdata(naoRenova(a).criado_em)}. Continua associado e pagando até dezembro; em janeiro o app faz o desligamento sozinho.${naoRenova(a).obs?'<br>Motivo: '+esc(naoRenova(a).obs):''}</div>
+      ${ehAdm()||DEMO?`<button class="btn sm ghost" style="margin-top:8px" onclick="desfazerNaoRenova(${id})">Desfazer</button>`:''}</div>` : ''}
+    ${(()=>{ const r = renovou(a); const w2 = waRenov(a); if (!linkRenov(a) || !a.ativo || naoRenova(a)) return '';
       return `<div class="card" style="margin-top:14px;${r?'background:var(--ok-soft);border:0':''}">
         <div class="row"><b class="grow">Renovação ${ANO_RENOV}</b><span class="badge ${r?'b-emdia':'b-mute'}">${r?'Renovado':'Não renovou'}</span></div>
         ${r ? `<div class="muted" style="margin-top:4px">Renovou em ${fdata(r.criado_em)}${r.forma_pagamento?' · prefere '+esc(r.forma_pagamento):''}${r.email?' · '+esc(r.email):''}${r.nascimento?' · nasc. '+fdata(r.nascimento):''}</div>${r.obs?`<div class="muted">Obs.: ${esc(r.obs)}</div>`:''}` : ''}
@@ -832,6 +845,18 @@ function formDesligar(id){
       await carregar('afiliados'); toast('Afiliado desligado'); render(); abrirAf(id); } catch(e){ $('#desErr').textContent = erroMsg(e); }
   });
 }
+async function desligarNaoRenovados(){
+  if (DEMO || !ehAdm()) return;
+  const mesAtual = hojeISO().slice(0,7);
+  const sair = S.afiliados.filter(a => a.ativo && a.cobrar_ate && a.cobrar_ate.slice(0,7) < mesAtual);
+  if (!sair.length) return;
+  for (const a of sair){
+    const [y,m] = a.cobrar_ate.split('-').map(Number); const fim = new Date(y, m, 0);
+    const iso = `${fim.getFullYear()}-${String(fim.getMonth()+1).padStart(2,'0')}-${String(fim.getDate()).padStart(2,'0')}`;
+    await DB.upd('afiliados', {id:a.id}, { ativo:false, desligado_em: iso, desligado_motivo:'Desistência', desligado_obs:`Não renovou para ${ANO_RENOV} (avisou pela página do afiliado).` });
+  }
+  await carregar('afiliados'); toast(`${sair.length} afiliado${sair.length>1?'s':''} que não renovaram foram desligados`, 4000);
+}
 async function reativarAf(id){
   const a = S.afiliados.find(x=>x.id===id); const mot = a.desligado_motivo;
   // Art. 16 do estatuto
@@ -853,6 +878,248 @@ async function reativarAf(id){
   if (!(await confirmar('Reativar este afiliado?', aviso, 'Reativar'))) return;
   try { await DB.upd('afiliados', {id}, { ativo:true, desligado_em:null, desligado_motivo:null, desligado_obs:null, readmissoes: (a.readmissoes||0) + (mot ? 1 : 0) });
     await carregar('afiliados'); toast('Afiliado reativado'); render(); abrirAf(id); } catch(e){ toast(erroMsg(e)); }
+}
+
+/* =====================================================================
+   AGENDA: REUNIÕES + EVENTOS
+   ===================================================================== */
+const TIPO_REU = { diretoria:'Diretoria', conselho_fiscal:'Conselho Fiscal', assembleia:'Assembleia Geral', extraordinaria:'Extraordinária' };
+const COR_REU = { diretoria:'b-acc', conselho_fiscal:'b-emdia', assembleia:'b-atraso', extraordinaria:'b-vence' };
+const DIAS_SEM = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+const LOCAL_PADRAO = 'Sede: Rua João Alcântara, 303, Vila Formosa';
+function vAgenda(){
+  S.agTab = S.agTab || 'reunioes';
+  const seg = `<div class="seg" style="margin-bottom:12px"><button class="${S.agTab==='reunioes'?'on':''}" onclick="S.agTab='reunioes';vAgenda()">Reuniões</button><button class="${S.agTab==='eventos'?'on':''}" onclick="S.agTab='eventos';vAgenda()">Eventos</button></div>`;
+  if (S.agTab === 'eventos'){ vEventos(); $('#view').insertAdjacentHTML('afterbegin', seg); return; }
+  const anos = [...new Set([new Date().getFullYear(), 2027, ...S.reunioes.map(r=>+r.data.slice(0,4))])].sort();
+  S.agAno = S.agAno || (S.reunioes.some(r=>r.data.startsWith('2027')) || new Date().getFullYear() < 2027 ? 2027 : new Date().getFullYear());
+  const lst = S.reunioes.filter(r=>r.data.startsWith(String(S.agAno))).sort((a,b)=>a.data.localeCompare(b.data));
+  const prox = S.reunioes.filter(r=>r.status==='agendada' && r.data>=hojeISO()).sort((a,b)=>a.data.localeCompare(b.data))[0];
+  const meses = [...new Set(lst.map(r=>+r.data.slice(5,7)))];
+  $('#view').innerHTML = seg + `
+    <div class="chips">${anos.map(a=>`<button class="chip ${a===S.agAno?'on':''}" onclick="S.agAno=${a};vAgenda()">${a}</button>`).join('')}</div>
+    ${prox ? `<div class="card" style="margin-top:12px;background:var(--accent-soft);border:0"><small class="muted" style="font-weight:700">PRÓXIMA REUNIÃO</small>
+      <div class="row" style="margin-top:6px" onclick="abrirReuniao(${prox.id})">${evData(prox)}<div class="grow"><b>${esc(prox.titulo)}</b><div class="muted">${esc([DIAS_SEM[new Date(prox.data+'T12:00').getDay()], prox.hora, prox.local].filter(Boolean).join(' · '))}</div></div></div></div>` : ''}
+    ${lst.length ? meses.map(m=>`<div class="sec-h"><h2 style="font-size:18px">${MESES_L[m-1][0].toUpperCase()+MESES_L[m-1].slice(1)}</h2></div>
+      <div class="list">${lst.filter(r=>+r.data.slice(5,7)===m).map(r=>`<div class="li" onclick="abrirReuniao(${r.id})" style="${r.status==='cancelada'?'opacity:.5':''}">${evData(r)}
+        <div class="grow"><div class="t">${esc(r.titulo)}</div><div class="s">${esc([r.hora, r.local].filter(Boolean).join(' · '))}</div></div>
+        <span class="badge ${r.status==='realizada'?'b-emdia':r.status==='cancelada'?'b-mute':COR_REU[r.tipo]}">${r.status==='agendada'?TIPO_REU[r.tipo]:r.status}</span></div>`).join('')}</div>`).join('')
+      : `<div class="card" style="margin-top:12px"><b>Agenda de ${S.agAno} vazia</b>
+        <p class="muted" style="margin:4px 0 0">Gere o calendário do ano seguindo o estatuto: reunião ordinária da Diretoria todo mês (Art. 25), Conselho Fiscal (Art. 28)${S.agAno===2027?' e a Assembleia de eleição de outubro, já que o mandato atual termina em 19/10/2027 (Art. 26, 28 e 30)':''}.</p>
+        <button class="btn acc wide" style="margin-top:12px" onclick="formGerarAgenda(${S.agAno})">Gerar agenda de ${S.agAno}</button></div>`}`;
+  fab('formReuniao()');
+}
+// n-ésimo dia da semana do mês (n = 1..4, ou 5 = último)
+function diaDoMes(ano, mes, diaSem, n){
+  if (n === 5){ const d = new Date(ano, mes, 0); while (d.getDay() !== diaSem) d.setDate(d.getDate()-1); return d; }
+  const d = new Date(ano, mes-1, 1); while (d.getDay() !== diaSem) d.setDate(d.getDate()+1); d.setDate(d.getDate() + 7*(n-1)); return d;
+}
+const isoD = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+function formGerarAgenda(ano){
+  abrirSheet(`<h3>Gerar agenda de ${ano}</h3><p class="muted">Escolha quando a Diretoria costuma se reunir. Depois dá para mudar qualquer data.</p>
+  <form class="f" id="fGer">
+    <div class="g2"><div><label>Semana do mês</label><select name="n"><option value="1">1ª</option><option value="2">2ª</option><option value="3">3ª</option><option value="4">4ª</option><option value="5">Última</option></select></div>
+    <div><label>Dia da semana</label><select name="dia">${DIAS_SEM.map((d,i)=>`<option value="${i}" ${i===2?'selected':''}>${d}</option>`).join('')}</select></div></div>
+    <div class="g2"><div><label>Horário</label><input name="hora" value="19:30"></div><div><label>Local</label><input name="local" value="${esc(LOCAL_PADRAO)}"></div></div>
+    <label class="row" style="font-weight:600;color:var(--ink)"><input type="checkbox" name="cf" checked style="width:22px;height:22px;flex:none"> Incluir a reunião anual do Conselho Fiscal (novembro)</label>
+    ${ano===2027?`<label class="row" style="font-weight:600;color:var(--ink)"><input type="checkbox" name="ass" checked style="width:22px;height:22px;flex:none"> Incluir a Assembleia Geral de eleição (outubro)</label>`:''}
+    <div class="err" id="gErr"></div>
+    <div class="row" style="margin-top:8px"><button type="button" class="btn ghost grow" onclick="fecharSheet()">Cancelar</button><button class="btn acc grow">Gerar</button></div>
+  </form>`);
+  $('#fGer').addEventListener('submit', async ev => {
+    ev.preventDefault(); const f = new FormData(ev.target); const n = +f.get('n'), dia = +f.get('dia'), hora = f.get('hora').trim(), local = f.get('local').trim();
+    const base = '1. Leitura e aprovação da ata anterior\n2. Situação financeira: entradas, saídas e mensalidades em atraso\n3. Eventos e ações sociais\n4. Novos afiliados e indicações\n5. Assuntos gerais';
+    const extra = { 1:`Abertura do ano: apresentação do Plano Anual ${ano}`, 6:'Balanço do 1º semestre', 9:'Preparação da Assembleia Geral de outubro (eleição)',
+      10:'Edital de convocação (5 dias antes, Art. 31) e relação dos sócios com direito a voto (Art. 32)',
+      11:`Aprovação das contribuições mensais de ${ano+1} (Art. 18) e do Plano Anual ${ano+1} para o Conselho Fiscal (Art. 38)`, 12:'Fechamento do ano e prestação de contas' };
+    const rows = [];
+    for (let m = 1; m <= 12; m++){
+      rows.push({ data: isoD(diaDoMes(ano, m, dia, n)), hora, local, tipo:'diretoria', titulo:`Reunião ordinária da Diretoria · ${MESES_L[m-1]}`,
+        pauta: (extra[m] ? `0. ${extra[m]}\n` : '') + base });
+    }
+    if (f.get('cf')) rows.push({ data: isoD(diaDoMes(ano, 11, dia, n === 5 ? 4 : Math.min(n+1, 4))), hora, local, tipo:'conselho_fiscal', titulo:`Reunião anual do Conselho Fiscal · ${ano}`,
+      pauta:'1. Exame dos livros, documentos e balancetes (Art. 28, §1º, I)\n2. Parecer sobre o orçamento de receitas e despesas (Art. 28, §1º, IV)\n3. Análise do Plano Anual apresentado pela Diretoria (Art. 38)\n4. Assuntos gerais' });
+    if (f.get('ass')){ const d = new Date(ano, 9, 19); while (d.getDay() !== 6) d.setDate(d.getDate()-1);
+      rows.push({ data: isoD(d), hora:'14:00', local, tipo:'assembleia', titulo:'Assembleia Geral Ordinária: eleição da Diretoria e do Conselho Fiscal',
+        pauta:'Eleição de Presidente, Vice-Presidente, Secretário Geral e Conselho Fiscal para o mandato de 4 anos (Art. 26, 28 e 30, I)\n\nAntes:\n• Publicar o edital com pelo menos 5 dias de antecedência (Art. 31)\n• Publicar a relação dos sócios com direito a voto 5 dias antes (Art. 32) — Mais → Assembleia\n• Votação secreta (Art. 27 e 36); só fundadores podem ser votados (Art. 7º)\n• Lista de presença assinada (Art. 33)\n\nO mandato atual termina em 19/10/2027.' }); }
+    try { await DB.ins('reunioes', rows); await carregar('reunioes'); fecharSheet(); S.agAno = ano; toast(`${rows.length} reuniões criadas`); vAgenda(); }
+    catch(e){ $('#gErr').textContent = erroMsg(e); }
+  });
+}
+function formReuniao(id){
+  const r = id ? S.reunioes.find(x=>x.id===id) : { data: hojeISO(), hora:'19:30', local: LOCAL_PADRAO, tipo:'diretoria', status:'agendada' };
+  abrirSheet(`<h3>${id?'Editar reunião':'Nova reunião'}</h3>
+  <form class="f" id="fReu">
+    <label>Tipo</label><select name="tipo">${Object.entries(TIPO_REU).map(([k,n])=>`<option value="${k}" ${k===r.tipo?'selected':''}>${n}</option>`).join('')}</select>
+    <label>Título</label><input name="titulo" required value="${esc(r.titulo||'')}" placeholder="Ex.: Reunião extraordinária da Diretoria">
+    <div class="g2"><div><label>Data</label><input name="data" type="date" required value="${r.data}"></div><div><label>Horário</label><input name="hora" value="${esc(r.hora||'')}"></div></div>
+    <label>Local</label><input name="local" value="${esc(r.local||'')}">
+    <label>Pauta</label><textarea name="pauta" style="min-height:140px">${esc(r.pauta||'')}</textarea>
+    <label>Situação</label><select name="status">${['agendada','realizada','cancelada'].map(x=>`<option ${x===r.status?'selected':''}>${x}</option>`).join('')}</select>
+    <div class="err" id="rErr"></div>
+    <div class="row" style="margin-top:8px">${id?`<button type="button" class="btn danger" onclick="excluirReuniao(${id})">Excluir</button>`:''}
+      <button type="button" class="btn ghost grow" onclick="${id?`abrirReuniao(${id})`:'fecharSheet()'}">Cancelar</button><button class="btn acc grow">Salvar</button></div>
+  </form>`);
+  $('#fReu').addEventListener('submit', async ev => {
+    ev.preventDefault(); const f = new FormData(ev.target);
+    const row = { tipo:f.get('tipo'), titulo:f.get('titulo').trim(), data:f.get('data'), hora:f.get('hora').trim()||null, local:f.get('local').trim()||null, pauta:f.get('pauta').trim()||null, status:f.get('status') };
+    try { let nid = id; if (id) await DB.upd('reunioes',{id},row); else nid = (await DB.ins('reunioes', row))[0].id;
+      await carregar('reunioes'); toast('Reunião salva'); render(); abrirReuniao(nid); } catch(e){ $('#rErr').textContent = erroMsg(e); }
+  });
+}
+function abrirReuniao(id){
+  const r = S.reunioes.find(x=>x.id===id); if (!r) return;
+  const dsem = DIAS_SEM[new Date(r.data+'T12:00').getDay()];
+  abrirSheet(`
+    <div class="row">${evData(r)}<div class="grow"><h3>${esc(r.titulo)}</h3><div class="muted">${dsem}, ${fdata(r.data)}${r.hora?' às '+esc(r.hora):''}</div></div></div>
+    <div class="row" style="margin-top:8px;gap:6px"><span class="badge ${COR_REU[r.tipo]}">${TIPO_REU[r.tipo]}</span><span class="badge ${r.status==='realizada'?'b-emdia':r.status==='cancelada'?'b-mute':'b-vence'}">${r.status}</span></div>
+    ${r.local?`<p class="muted" style="margin:10px 0 0">📍 ${esc(r.local)}</p>`:''}
+    ${r.pauta?`<div class="card" style="margin-top:12px"><b>Pauta</b><div style="white-space:pre-wrap;margin-top:6px;font-size:15px">${esc(r.pauta)}</div></div>`:''}
+    <div class="row" style="margin-top:12px;flex-wrap:wrap">
+      <a class="btn acc grow" style="text-decoration:none" href="https://wa.me/?text=${encodeURIComponent(convocacao(r))}" target="_blank" rel="noopener">${IC.wa} Enviar convocação</a>
+      <button class="btn ghost grow" onclick="baixarIcs(${id})">📅 Salvar no calendário</button></div>
+    <div class="sec-h"><h2 style="font-size:18px">Ata</h2></div>
+    <form class="f" id="fAta"><textarea name="ata" style="min-height:120px" placeholder="Resumo do que foi decidido (opcional)">${esc(r.ata||'')}</textarea>
+      <div id="ataArq" class="muted" style="margin-top:6px">${r.ata_arquivo?'<span class="spin"></span>':'Nenhum arquivo de ata anexado.'}</div>
+      <label for="ataFile" class="btn ghost wide" style="margin:8px 0 0;color:var(--ink);text-align:center;padding:12px">📎 Anexar ata assinada (PDF ou foto)</label>
+      <input type="file" id="ataFile" accept="application/pdf,.pdf,image/*" class="hide">
+      <button class="btn acc wide" style="margin-top:8px">Salvar ata${r.status==='agendada'?' e marcar como realizada':''}</button></form>
+    <div class="row" style="margin-top:12px"><button class="btn ghost grow" onclick="formReuniao(${id})">Editar</button><button class="btn ghost grow" onclick="fecharSheet()">Fechar</button></div>`);
+  if (r.ata_arquivo && !DEMO) sb.storage.from('documentos').createSignedUrl(r.ata_arquivo, 3600).then(({data}) => { const el = $('#ataArq'); if (el && data) el.innerHTML = `<a href="${data.signedUrl}" target="_blank" rel="noopener">📄 Abrir ata anexada</a>`; });
+  $('#ataFile').onchange = e => { const f = e.target.files[0]; if (f) $('#ataArq').innerHTML = `<b style="color:var(--ink)">${esc(f.name)}</b> será anexada ao salvar.`; };
+  $('#fAta').addEventListener('submit', async ev => {
+    ev.preventDefault(); const btn = ev.target.querySelector('button.acc'); btn.disabled = true;
+    try { const patch = { ata: new FormData(ev.target).get('ata').trim() || null };
+      if (r.status === 'agendada') patch.status = 'realizada';
+      const f = $('#ataFile').files[0];
+      if (f && !DEMO){ const ext = (f.name.split('.').pop()||'pdf').toLowerCase(); const path = `atas/${r.data}-${id}-${Date.now()}.${ext}`;
+        const { error } = await sb.storage.from('documentos').upload(path, f, { contentType: f.type || 'application/pdf' }); if (error) throw error; patch.ata_arquivo = path; }
+      await DB.upd('reunioes', {id}, patch); await carregar('reunioes'); toast('Ata salva'); render(); abrirReuniao(id);
+    } catch(e){ toast(erroMsg(e)); btn.disabled = false; }
+  });
+}
+function convocacao(r){
+  const dsem = DIAS_SEM[new Date(r.data+'T12:00').getDay()];
+  return `🦣 *Associação Mastodonte*\n*${r.titulo}*\n\n📅 ${dsem}, ${fdata(r.data)}${r.hora?' às '+r.hora:''}\n${r.local?'📍 '+r.local+'\n':''}${r.pauta?'\n*Pauta:*\n'+r.pauta+'\n':''}\nContamos com a sua presença!`;
+}
+function baixarIcs(id){
+  const r = S.reunioes.find(x=>x.id===id); const [hh,mm] = (r.hora||'19:00').match(/\d+/g) || ['19','00'];
+  const ini = r.data.replace(/-/g,'') + 'T' + String(hh).padStart(2,'0') + String(mm||'00').padStart(2,'0') + '00';
+  const fimH = String((+hh+2)%24).padStart(2,'0');
+  const fim = r.data.replace(/-/g,'') + 'T' + fimH + String(mm||'00').padStart(2,'0') + '00';
+  const escI = t => String(t||'').replace(/[\\,;]/g, m=>'\\'+m).replace(/\n/g,'\\n');
+  const ics = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Mastodonte//Agenda//PT','BEGIN:VEVENT',`UID:reuniao-${id}@mastodonte`,`DTSTAMP:${new Date().toISOString().replace(/[-:]/g,'').slice(0,15)}Z`,
+    `DTSTART;TZID=America/Sao_Paulo:${ini}`,`DTEND;TZID=America/Sao_Paulo:${fim}`,`SUMMARY:${escI(r.titulo)}`,`LOCATION:${escI(r.local)}`,`DESCRIPTION:${escI(r.pauta)}`,'END:VEVENT','END:VCALENDAR'].join('\r\n');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([ics], {type:'text/calendar'})); a.download = `reuniao-${r.data}.ics`; a.click();
+}
+async function excluirReuniao(id){
+  if (!(await confirmar('Excluir esta reunião?', 'A pauta e a ata registradas nela serão apagadas.'))) return;
+  try { await DB.del('reunioes', {id}); await carregar('reunioes'); fecharSheet(); toast('Reunião excluída'); render(); } catch(e){ toast(erroMsg(e)); }
+}
+
+/* =====================================================================
+   PLANEJAMENTO ANUAL (Art. 38) E ORÇAMENTO (Art. 25, VIII)
+   ===================================================================== */
+const SECOES_PLANO = [
+  ['recursos', 'Recursos e cobrança', 'Art. 38, I: como obter recursos, mudanças na cobrança e nos relatórios'],
+  ['eventos', 'Eventos', 'Art. 38, III: eventos a serem realizados'],
+  ['sociais', 'Ações e promoções sociais', 'Art. 38, IV: campanhas, doações, ações filantrópicas'],
+  ['aquisicoes', 'Aquisições e mobiliário', 'Art. 38, V: compras de bens e mobiliário'],
+  ['secretaria', 'Secretaria e cadastro', 'Art. 38, II: arquivo, fichas, identificação dos sócios'],
+  ['costumes', 'Usos e costumes', 'Art. 38, VI: mudanças nos costumes da entidade'],
+  ['orcamento', 'Outras receitas e despesas previstas', 'Art. 25, VIII: itens do orçamento que não estão acima'] ];
+const ST_PLANO = { planejado:['Planejado','b-mute'], andamento:['Em andamento','b-vence'], concluido:['Concluído','b-emdia'], cancelado:['Cancelado','b-mute'] };
+function vPlano(){
+  const anos = [...new Set([new Date().getFullYear(), 2027, ...S.planejamento.map(p=>p.ano)])].sort();
+  S.plAno = S.plAno || 2027;
+  const its = S.planejamento.filter(p=>p.ano===S.plAno);
+  const ok = its.filter(p=>p.status==='concluido').length, ativos = its.filter(p=>p.status!=='cancelado');
+  const rec = ativos.filter(p=>p.tipo==='receita').reduce((s,p)=>s+Number(p.valor||0),0);
+  const desp = ativos.filter(p=>p.tipo==='despesa').reduce((s,p)=>s+Number(p.valor||0),0);
+  const nMens = S.afiliados.filter(a=>a.ativo && !naoRenova(a)).length, prevMens = nMens * MENSALIDADE_PADRAO * 12;
+  const temMens = its.some(p=>p.tipo==='receita' && p.categoria==='Mensalidade');
+  // previsto x realizado por categoria
+  const cats = {}; ativos.filter(p=>p.tipo && p.categoria).forEach(p => { const k = p.tipo+'|'+p.categoria; cats[k] = (cats[k]||0) + Number(p.valor||0); });
+  const real = (tipo, cat) => S.movimentos.filter(m => m.data.startsWith(String(S.plAno)) && (tipo==='receita' ? m.valor>0 : m.valor<0) &&
+      (cat==='Mensalidade' ? (m.afiliado_id || m.categoria==='Mensalidade' || m.categoria==='Boletos (sem identificação)') : m.categoria===cat)).reduce((s,m)=>s+Math.abs(m.valor),0);
+  const item = p => `<div class="li" onclick="formPlano(${p.id})" style="${p.status==='cancelado'?'opacity:.5':''}"><div class="grow">
+      <div class="t">${esc(p.titulo)}</div><div class="s">${[p.mes?MESES_L[p.mes-1]:'', p.responsavel, p.valor?(p.tipo==='receita'?'+ ':'− ')+brl(p.valor):''].filter(Boolean).map(esc).join(' · ')||'—'}</div></div>
+      <span class="badge ${ST_PLANO[p.status][1]}">${ST_PLANO[p.status][0]}</span></div>`;
+  $('#view').innerHTML = `
+    <div class="chips">${anos.map(a=>`<button class="chip ${a===S.plAno?'on':''}" onclick="S.plAno=${a};vPlano()">${a}</button>`).join('')}</div>
+    <div class="card" style="margin-top:12px"><div class="row"><div class="grow"><b>Plano Anual ${S.plAno}</b>
+      <div class="muted">${its.length ? `${ok} de ${its.length} itens concluídos` : 'Ainda sem itens'} · apresentado ao Conselho Fiscal na reunião de novembro (Art. 38)</div></div></div>
+      ${its.length?`<div class="bars" style="margin-top:8px"><div class="bt"><div class="bf" style="width:${(ok/its.length*100).toFixed(1)}%;background:var(--ok)"></div></div></div>
+      <div class="row" style="margin-top:10px"><button class="btn sm ghost grow" onclick="copiarPlano()">Copiar plano</button><button class="btn sm ghost grow" onclick="baixarPlano()">Baixar planilha</button></div>`:''}</div>
+    <div class="sec-h"><h2>Orçamento ${S.plAno}</h2></div>
+    <div class="kpis"><div class="card kpi ok"><small>Receitas previstas</small><b class="val">${brl(rec)}</b></div><div class="card kpi"><small>Despesas previstas</small><b class="val neg">${brl(desp)}</b></div></div>
+    <div class="card kpi" style="margin-top:10px"><small>Saldo previsto</small><b class="val ${rec-desp>=0?'pos':'neg'}">${brl(rec-desp)}</b></div>
+    ${!temMens && nMens ? `<div class="card" style="margin-top:10px;background:var(--accent-soft);border:0"><b>Mensalidades previstas: ${brl(prevMens)}</b>
+      <div class="muted">${nMens} afiliados × ${brl(MENSALIDADE_PADRAO)} × 12 meses${S.afiliados.some(a=>a.ativo&&naoRenova(a))?' (sem contar quem não vai renovar)':''}</div>
+      <button class="btn sm acc" style="margin-top:8px" onclick="addMensPlano(${prevMens}, ${nMens})">Adicionar ao orçamento</button></div>` : ''}
+    ${Object.keys(cats).length ? `<div class="card" style="margin-top:10px"><b>Previsto × realizado</b>
+      ${Object.entries(cats).map(([k,v])=>{ const [t,c] = k.split('|'); const r = real(t,c); const pct = v ? Math.min(100, r/v*100) : 0;
+        return `<div class="bars" style="margin-top:10px"><div class="bl"><span>${t==='receita'?'⬆':'⬇'} ${esc(c)}</span><span class="val">${brl(r)} de ${brl(v)}</span></div>
+          <div class="bt"><div class="bf" style="width:${pct.toFixed(1)}%;background:${t==='receita'?'var(--ok)':(r>v?'var(--bad)':'var(--accent)')}"></div></div></div>`; }).join('')}</div>` : ''}
+    ${SECOES_PLANO.map(([k,n,d])=>{ const l = its.filter(p=>p.secao===k).sort((a,b)=>(a.mes||13)-(b.mes||13));
+      return `<div class="sec-h"><div><h2 style="font-size:18px">${n}</h2><div class="muted" style="font-size:13px">${d}</div></div><button class="btn sm ghost" onclick="formPlano(null,'${k}')">${IC.plus}</button></div>
+        ${l.length ? `<div class="list">${l.map(item).join('')}</div>` : `<div class="card empty" style="padding:14px">Nenhum item.</div>`}`; }).join('')}`;
+  fab('formPlano()');
+}
+function formPlano(id, secao){
+  const p = id ? S.planejamento.find(x=>x.id===id) : { ano:S.plAno, secao: secao || 'eventos', status:'planejado', tipo: secao==='orcamento' ? 'despesa' : '' };
+  const catOpts = t => (t==='receita'?CAT_ENT:CAT_SAI).map(c=>`<option ${c===p.categoria?'selected':''}>${esc(c)}</option>`).join('');
+  abrirSheet(`<h3>${id?'Editar item do plano':'Novo item do plano'}</h3>
+  <form class="f" id="fPl">
+    <label>Parte do plano</label><select name="secao">${SECOES_PLANO.map(([k,n])=>`<option value="${k}" ${k===p.secao?'selected':''}>${n}</option>`).join('')}</select>
+    <label>O que vai ser feito *</label><input name="titulo" required value="${esc(p.titulo||'')}" placeholder="Ex.: Festa de aniversário da associação">
+    <label>Detalhes</label><textarea name="descricao">${esc(p.descricao||'')}</textarea>
+    <div class="g2"><div><label>Mês previsto</label><select name="mes"><option value="">—</option>${MESES_L.map((m,i)=>`<option value="${i+1}" ${p.mes===i+1?'selected':''}>${m}</option>`).join('')}</select></div>
+    <div><label>Responsável</label><input name="resp" value="${esc(p.responsavel||'')}"></div></div>
+    <label>Entra no orçamento?</label><select name="tipo" id="plTipo"><option value="">Não</option><option value="receita" ${p.tipo==='receita'?'selected':''}>Sim, é uma receita</option><option value="despesa" ${p.tipo==='despesa'?'selected':''}>Sim, é uma despesa</option></select>
+    <div id="plOrc" class="${p.tipo?'':'hide'}"><div class="g2"><div><label>Categoria</label><select name="categoria" id="plCat">${catOpts(p.tipo||'despesa')}</select></div>
+      <div><label>Valor previsto</label><input name="valor" inputmode="decimal" value="${p.valor?String(p.valor).replace('.',','):''}" placeholder="0,00"></div></div>
+      <div class="muted" style="margin-top:4px">A categoria liga o item ao Financeiro, e o plano mostra quanto já foi realizado.</div></div>
+    <label>Situação</label><select name="status">${Object.entries(ST_PLANO).map(([k,[n]])=>`<option value="${k}" ${k===p.status?'selected':''}>${n}</option>`).join('')}</select>
+    <div class="err" id="plErr"></div>
+    <div class="row" style="margin-top:8px">${id?`<button type="button" class="btn danger" onclick="excluirPlano(${id})">Excluir</button>`:''}
+      <button type="button" class="btn ghost grow" onclick="fecharSheet()">Cancelar</button><button class="btn acc grow">Salvar</button></div>
+  </form>`);
+  $('#plTipo').onchange = e => { const t = e.target.value; $('#plOrc').classList.toggle('hide', !t); if (t) $('#plCat').innerHTML = catOpts(t); };
+  $('#fPl').addEventListener('submit', async ev => {
+    ev.preventDefault(); const f = new FormData(ev.target); const tipo = f.get('tipo') || null;
+    const valor = tipo ? parseFloat(String(f.get('valor')||'').replace(/\./g,'').replace(',','.')) : null;
+    if (tipo && !(valor > 0)) return $('#plErr').textContent = 'Informe o valor previsto.';
+    const row = { ano: p.ano || S.plAno, secao:f.get('secao'), titulo:f.get('titulo').trim(), descricao:f.get('descricao').trim()||null, mes: f.get('mes') ? +f.get('mes') : null,
+      responsavel:f.get('resp').trim()||null, tipo, categoria: tipo ? f.get('categoria') : null, valor: tipo ? valor : null, status:f.get('status') };
+    try { if (id) await DB.upd('planejamento',{id},row); else await DB.ins('planejamento', row);
+      await carregar('planejamento'); fecharSheet(); toast('Plano atualizado'); render(); } catch(e){ $('#plErr').textContent = erroMsg(e); }
+  });
+}
+async function addMensPlano(valor, n){
+  try { await DB.ins('planejamento', { ano:S.plAno, secao:'recursos', titulo:`Mensalidades de ${n} afiliados`, descricao:`${n} × ${brl(MENSALIDADE_PADRAO)} × 12 meses, pagas por PIX`,
+      tipo:'receita', categoria:'Mensalidade', valor, status:'planejado' });
+    await carregar('planejamento'); toast('Mensalidades adicionadas ao orçamento'); vPlano(); } catch(e){ toast(erroMsg(e)); }
+}
+async function excluirPlano(id){
+  if (!(await confirmar('Excluir este item do plano?'))) return;
+  try { await DB.del('planejamento', {id}); await carregar('planejamento'); fecharSheet(); toast('Item excluído'); render(); } catch(e){ toast(erroMsg(e)); }
+}
+function textoPlano(){
+  const its = S.planejamento.filter(p=>p.ano===S.plAno && p.status!=='cancelado');
+  const rec = its.filter(p=>p.tipo==='receita').reduce((s,p)=>s+Number(p.valor||0),0), desp = its.filter(p=>p.tipo==='despesa').reduce((s,p)=>s+Number(p.valor||0),0);
+  return `ASSOCIAÇÃO MASTODONTE\nPLANO ANUAL ${S.plAno} (Art. 38 do estatuto)\n` +
+    SECOES_PLANO.map(([k,n]) => { const l = its.filter(p=>p.secao===k); if (!l.length) return '';
+      return `\n${n.toUpperCase()}\n` + l.map(p=>`• ${p.titulo}${p.mes?' ('+MESES_L[p.mes-1]+')':''}${p.valor?' — '+(p.tipo==='receita'?'receita ':'despesa ')+brl(p.valor):''}${p.descricao?'\n  '+p.descricao:''}`).join('\n'); }).join('\n') +
+    `\n\nORÇAMENTO PREVISTO\nReceitas: ${brl(rec)}\nDespesas: ${brl(desp)}\nSaldo: ${brl(rec-desp)}`;
+}
+async function copiarPlano(){ const t = textoPlano(); try { await navigator.clipboard.writeText(t); toast('Plano copiado'); } catch(e){ prompt('Copie o plano:', t); } }
+async function baixarPlano(){
+  try { if (!window.XLSX) await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
+    const rows = S.planejamento.filter(p=>p.ano===S.plAno).map(p=>({ Parte:(SECOES_PLANO.find(s=>s[0]===p.secao)||[,''])[1], Item:p.titulo, Detalhes:p.descricao||'', Mês:p.mes?MESES_L[p.mes-1]:'',
+      Responsável:p.responsavel||'', Tipo:p.tipo||'', Categoria:p.categoria||'', 'Valor previsto':p.valor?Number(p.valor):'', Situação:ST_PLANO[p.status][0] }));
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Plano ' + S.plAno); XLSX.writeFile(wb, `plano-anual-${S.plAno}.xlsx`);
+  } catch(e){ toast(erroMsg(e)); }
 }
 
 /* =====================================================================

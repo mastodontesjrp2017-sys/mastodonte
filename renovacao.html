@@ -154,8 +154,9 @@ function gradeMeses(d){
       ${L.filter(x=>x.y===y).map(x=>`<div class="m-${x.k}">${MESES[x.m-1]}<span>${TXT[x.k]}</span></div>`).join('')}</div></div>`).join('')}
     <div class="leg"><span><i style="background:var(--ok)"></i>pago</span><span><i style="background:var(--bad)"></i>em aberto</span><span><i style="background:var(--line)"></i>a vencer</span></div></div>`;
 }
+let SIT = null;
 function mostrarSituacao(d){
-  const s = situacao(d);
+  const s = situacao(d); SIT = s;
   document.getElementById('sit').innerHTML = `
     <div class="card ${s.k}"><div class="st"><div class="dot">${s.k==='ok'?'✓':'!'}</div><div><h2 style="margin:0">${s.txt}</h2>
       <p class="muted">${s.pagoAte ? 'Pago até '+s.pagoAte : 'Nenhuma mensalidade registrada ainda'}</p></div></div>
@@ -253,7 +254,16 @@ async function iniciar(){
   form(data);
 }
 
-function form(d){
+let DADOS = null;
+function form(d, forcar){
+  DADOS = d;
+  if (d.decisao === 'nao_renovar' && !forcar){
+    box.innerHTML = `<div class="done" style="padding:18px 6px"><h2>Você avisou que não vai renovar</h2>
+      <p class="muted" style="margin-top:6px">Você continua associado até <b>31/12/2026</b>. Pague as mensalidades até dezembro normalmente. A partir de janeiro de ${ANO}, o seu cadastro será encerrado.</p>
+      <button id="mudei" style="margin-top:16px">Mudei de ideia, quero renovar</button></div>`;
+    document.getElementById('mudei').onclick = () => form(d, true);
+    return;
+  }
   box.innerHTML = `
     <h2>Olá, ${esc((d.nome||'').split(' ')[0].toLowerCase().replace(/^./, c=>c.toUpperCase()))}!</h2>
     <p class="muted">${d.renovado ? 'Você já renovou para 2027. Se quiser, pode corrigir seus dados e enviar de novo.' : 'Confira seus dados, corrija o que for preciso e confirme a renovação.'}</p>
@@ -283,6 +293,38 @@ function form(d){
       <button id="btn" type="submit">Confirmar renovação</button>
     </form>`;
   document.getElementById('f').addEventListener('submit', enviar);
+  box.insertAdjacentHTML('beforeend', `<div style="border-top:1px solid var(--line);margin-top:22px;padding-top:14px;text-align:center">
+    <button type="button" id="naoRen" style="background:none;color:var(--ink3);font-size:15px;margin:0;padding:8px;text-decoration:underline">Não quero renovar para ${ANO}</button></div>`);
+  document.getElementById('naoRen').onclick = telaNaoRenovar;
+}
+
+function telaNaoRenovar(){
+  const deve = SIT && SIT.deve > 0.005;
+  if (deve){
+    box.innerHTML = `<h2>Antes de sair, é preciso estar em dia</h2>
+      <p class="muted" style="margin-top:6px">Pelo estatuto (Art. 10, IV), o sócio pode pedir para sair desde que esteja quite com a Tesouraria. Hoje há <b style="color:var(--bad)">${brl(SIT.deve)}</b> em aberto.</p>
+      <p class="muted" style="margin-top:10px">Faça o PIX do valor em aberto e, depois que ele for identificado, volte a este link para registrar a sua decisão.</p>
+      ${blocoPix()}
+      <button type="button" id="voltar" style="margin-top:16px;background:var(--bg);color:var(--ink);border:1px solid var(--line)">Voltar</button>`;
+    document.getElementById('voltar').onclick = () => form(DADOS);
+    return;
+  }
+  box.innerHTML = `<h2>Não vai renovar para ${ANO}?</h2>
+    <p class="muted" style="margin-top:6px">Sem problema. Você continua associado até <b>31/12/2026</b>, com todos os direitos, e paga as mensalidades até dezembro. A partir de janeiro de ${ANO}, o seu cadastro é encerrado e não haverá mais cobranças.</p>
+    <label for="mot">Quer contar o motivo? (opcional)</label>
+    <textarea id="mot" maxlength="500" placeholder="Ex.: mudança de cidade"></textarea>
+    <div class="err" id="errN"></div>
+    <button type="button" id="confN" style="background:var(--bad)">Confirmar que não vou renovar</button>
+    <button type="button" id="voltar" style="margin-top:10px;background:var(--bg);color:var(--ink);border:1px solid var(--line)">Voltar e renovar</button>`;
+  document.getElementById('voltar').onclick = () => form(DADOS, true);
+  document.getElementById('confN').onclick = async e => {
+    e.target.disabled = true; e.target.textContent = 'Enviando…';
+    const { error } = await sb.rpc('renovacao_recusar', { p_token: token, p_motivo: document.getElementById('mot').value.trim() || null });
+    if (error){ e.target.disabled = false; e.target.textContent = 'Confirmar que não vou renovar'; return document.getElementById('errN').textContent = 'Não foi possível enviar. Tente de novo.'; }
+    DADOS.decisao = 'nao_renovar';
+    box.innerHTML = `<div class="done"><div class="ic" style="background:var(--bg);color:var(--ink2)">✓</div><h2>Decisão registrada</h2>
+      <p class="muted">Você continua associado até 31/12/2026. Obrigado por ter feito parte da Mastodonte! 🦣<br>Se mudar de ideia até lá, é só abrir este link de novo.</p></div>`;
+  };
 }
 
 async function enviar(ev){
