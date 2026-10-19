@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Evento — Associação Mastodonte</title>
+<meta name="theme-color" content="#141414">
+<meta property="og:title" content="Evento da Associação Mastodonte">
+<meta property="og:description" content="Veja data, local e confirme sua presença.">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{--bg:#f3efe6;--card:#fffdf8;--ink:#161513;--ink2:#4f4a43;--ink3:#6e685d;--line:#e3ddd0;--brand:#141414;--brand-ink:#f0eadc;--accent:#b8742a;--accent-soft:#f3e4cf;--ok:#2f7a4c;--ok-soft:#e1f0e5;--bad:#b8352a;--bad-soft:#f8dfdb;--slab:'Zilla Slab',Georgia,serif;color-scheme:light}
+@media(prefers-color-scheme:dark){:root{--bg:#121110;--card:#1c1b19;--ink:#efeae0;--ink2:#c9c2b4;--ink3:#a39c8f;--line:#2e2c28;--brand:#0a0a0a;--accent:#d8964b;--accent-soft:#3a2b1a;--ok:#5cbf83;--ok-soft:#173222;--bad:#ec6f62;--bad-soft:#3d1b17;color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.5 system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif}
+header{background:var(--brand);color:var(--brand-ink);padding:calc(18px + env(safe-area-inset-top,0px)) 18px 18px;display:flex;gap:12px;align-items:center}
+header img{width:52px;height:auto}
+header b{font-family:var(--slab);font-size:22px;letter-spacing:.06em;display:block}
+header small{opacity:.8}
+main{max-width:640px;margin:0 auto;padding:16px 16px calc(40px + env(safe-area-inset-bottom,0px))}
+h1,h2{font-family:var(--slab);line-height:1.2}
+h1{font-size:26px;margin:6px 0 4px}h2{font-size:20px;margin:22px 0 8px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+label{display:block;font-weight:700;color:var(--ink2);font-size:15px;margin:12px 0 5px}
+input,select,textarea{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 13px}
+textarea{min-height:80px;resize:vertical}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:420px){.g2{grid-template-columns:1fr}}
+.muted{color:var(--ink3);font-size:15px}
+.termo{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px;font-size:15px;max-height:340px;overflow:auto;white-space:pre-wrap}
+.op{display:flex;gap:10px;align-items:flex-start;border:2px solid var(--line);border-radius:12px;padding:12px;margin-top:10px;cursor:pointer;font-weight:600;color:var(--ink)}
+.op input{width:22px;height:22px;flex:none;margin:1px 0 0;accent-color:var(--accent)}
+.op:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.chk{display:flex;gap:10px;align-items:flex-start;font-weight:600;color:var(--ink);margin-top:16px}
+.chk input{width:22px;height:22px;flex:none;margin:1px 0 0;accent-color:var(--accent)}
+button{font:inherit;font-weight:700;border:0;border-radius:14px;padding:15px;width:100%;background:var(--accent);color:#fff;cursor:pointer;margin-top:18px}
+button:disabled{opacity:.6}
+.err{color:var(--bad);font-weight:600;margin-top:10px;min-height:1px}
+.ok{text-align:center;padding:30px 16px}.ok div{font-size:56px}
+.print-only{display:none}
+@media print{header,form,.no-print{display:none!important}.print-only{display:block}body,html{background:#fff;color:#000}.termo{max-height:none;border:0;padding:0;background:#fff;font-size:13px}main{padding:0}}
+.arte{width:100%;border-radius:16px;display:block;margin-bottom:14px}
+.info{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--line)}
+.info:first-of-type{border-top:0}.info .ic{font-size:24px;line-height:1.2}.info b{display:block}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+.btn2{display:block;text-align:center;text-decoration:none;font-weight:700;border-radius:14px;padding:13px;background:var(--bg);border:1px solid var(--line);color:var(--ink)}
+.tag{display:inline-block;background:var(--accent-soft);color:var(--accent);font-weight:700;border-radius:999px;padding:4px 12px;font-size:14px}
+</style>
+</head>
+<body>
+<header><img src="mamute.png" alt=""><div><b>MASTODONTE</b><small>Associação Mastodonte</small></div></header>
+<main id="app"><p class="muted">Carregando…</p></main>
+<script>
+const CFG = { url: 'https://cknzysljezvpazonvibb.supabase.co', key: 'sb_publishable_ji48PdmWNR5nvQkXMhbbCQ_DEekbpVL' };
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const dig = s => String(s ?? '').replace(/\D/g, '');
+const token = new URLSearchParams(location.search).get('e') || '';
+const chave = 'masto_conf_' + token;
+let sb = null, EV = null;
+const dataLonga = iso => new Date(iso + 'T12:00').toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+function lerConf(){ try { return JSON.parse(localStorage.getItem(chave) || 'null'); } catch(e){ return null; } }
+function linkAgenda(e){
+  if (!e.data) return '';
+  const d = e.data.replace(/-/g,''); const h = /^(\d{1,2})(?::|h)?(\d{2})?/.exec(e.hora || '');
+  let datas = d + '/' + (+d + 1);
+  if (h){ const hh = String(+h[1]).padStart(2,'0'), mm = h[2] || '00'; datas = `${d}T${hh}${mm}00/${d}T${String(Math.min(23, +h[1] + 4)).padStart(2,'0')}${mm}00`; }
+  return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent(e.nome) + '&dates=' + datas +
+    '&ctz=America/Sao_Paulo&location=' + encodeURIComponent(e.local || '') + '&details=' + encodeURIComponent(e.descricao || '');
+}
+async function iniciar(){
+  try {
+    if (!window.supabase) throw new Error('Sem conexão. Verifique a internet e recarregue a página.');
+    sb = supabase.createClient(CFG.url, CFG.key);
+    const { data, error } = await sb.rpc('evento_publico', { p_token: token || '00000000-0000-0000-0000-000000000000' });
+    if (error) throw error;
+    if (!data){ $('#app').innerHTML = '<div class="card ok"><div>🦣</div><h1>Evento não encontrado</h1><p class="muted">O link pode estar incompleto ou a divulgação foi encerrada.</p></div>'; return; }
+    EV = data; document.title = data.nome + ' — Associação Mastodonte'; mostrar();
+  } catch(e){ $('#app').innerHTML = `<div class="card"><b>Não foi possível abrir o evento</b><p class="muted">${esc(e.message || e)}</p><button onclick="location.reload()">Tentar de novo</button></div>`; }
+}
+function mostrar(){
+  const e = EV, conf = lerConf(), canc = e.status === 'cancelado', excl = e.quem_participa && e.quem_participa !== 'todos';
+  const mapa = e.local ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(e.local) : '';
+  $('#app').innerHTML = `
+    ${e.arte ? `<img class="arte" src="${CFG.url}/storage/v1/object/public/divulgacao/${esc(e.arte)}" alt="Arte do evento ${esc(e.nome)}">` : ''}
+    ${canc ? '<p><span class="tag" style="background:var(--bad-soft);color:var(--bad)">Evento cancelado</span></p>' : ''}
+    <h1>${esc(e.nome)}</h1>
+    ${excl ? `<p style="margin:6px 0 0"><span class="tag">🔒 Exclusivo para associados${e.quem_participa==='contribuintes'?' contribuintes':''} em dia${e.permite_acompanhantes?'':' · sem acompanhantes'}</span></p>` : ''}
+    <div class="card" style="margin-top:12px">
+      <div class="info"><span class="ic">📅</span><div><b>${e.data ? esc(dataLonga(e.data)) : 'Data a confirmar'}</b>${e.hora ? `<span class="muted">às ${esc(e.hora)}</span>` : ''}</div></div>
+      <div class="info"><span class="ic">📍</span><div><b>${esc(e.local || 'Local a confirmar')}</b></div></div>
+      ${e.descricao ? `<div class="info"><span class="ic">ℹ️</span><div style="white-space:pre-wrap">${esc(e.descricao)}</div></div>` : ''}
+      ${!canc ? `<div class="btns">${mapa ? `<a class="btn2" href="${mapa}" target="_blank" rel="noopener">🗺️ Ver no mapa</a>` : ''}${e.data ? `<a class="btn2" href="${linkAgenda(e)}" target="_blank" rel="noopener">🗓️ Salvar na agenda</a>` : ''}</div>` : ''}
+    </div>
+    ${e.aceita_confirmacao ? (conf ? `<div class="card ok" style="margin-top:14px;padding:20px"><div>✅</div><h2 style="margin:6px 0">Presença confirmada!</h2>
+        <p style="margin:0"><b>${esc(conf.nome)}</b> · ${conf.pessoas} pessoa${conf.pessoas>1?'s':''}</p>
+        <button style="background:var(--bg);color:var(--ink);border:1px solid var(--line)" onclick="localStorage.removeItem(chave);mostrar()">Alterar minha confirmação</button></div>`
+      : `<form id="f" class="card" style="margin-top:14px" novalidate>
+        <h2 style="margin-top:0">Confirme sua presença</h2>
+        <p class="muted" style="margin-top:0">${e.confirmados ? `${e.confirmados} pessoa${e.confirmados>1?'s':''} já confirmaram. ` : ''}Ajuda a organização a preparar tudo.</p>
+        ${excl ? `<label>Seu CPF de associado *</label><input name="cpf" inputmode="numeric" required placeholder="000.000.000-00" autocomplete="off">
+        <p class="muted" style="margin:6px 0 0;font-size:14px">O CPF serve só para conferir o seu cadastro na associação.</p>`
+        : `<label>Seu nome *</label><input name="nome" required autocomplete="name">
+        <label>WhatsApp *</label><input name="tel" inputmode="tel" required placeholder="(17) 99999-9999" autocomplete="tel">`}
+        ${e.permite_acompanhantes ? `<label>Quantas pessoas, contando você?</label><select name="p">${Array.from({length:10},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join('')}</select>` : ''}
+        <label>Observação (opcional)</label><input name="obs" maxlength="300" placeholder="Ex.: vou chegar mais tarde">
+        <div class="err" id="err"></div>
+        <button id="btn">Confirmar presença</button>
+        <p class="muted" style="margin:10px 0 0;font-size:13px">${excl ? 'A confirmação' : 'Seu nome e telefone'} fica${excl?'':'m'} só com a diretoria da associação, para organizar o evento.</p></form>`)
+    : (!canc ? '<p class="muted" style="margin-top:14px">As confirmações de presença estão encerradas.</p>' : '')}
+    <button style="background:var(--bg);color:var(--ink);border:1px solid var(--line)" onclick="compartilhar()">Compartilhar este evento</button>`;
+  $('#f')?.addEventListener('submit', confirmarPresenca);
+}
+async function confirmarPresenca(ev){
+  ev.preventDefault(); const f = new FormData(ev.target), err = $('#err'); err.textContent = '';
+  const excl = EV.quem_participa && EV.quem_participa !== 'todos';
+  const nome = (f.get('nome') || '').trim(), tel = dig(f.get('tel')), cpf = dig(f.get('cpf')), pessoas = +(f.get('p') || 1);
+  if (excl && cpf.length !== 11) return err.textContent = 'Informe o seu CPF (11 números).';
+  if (!excl && !nome) return err.textContent = 'Informe seu nome.';
+  if (!excl && tel.length < 10) return err.textContent = 'Informe o WhatsApp com DDD.';
+  const btn = $('#btn'); btn.disabled = true; btn.textContent = 'Enviando…';
+  try {
+    const { data, error } = await sb.rpc('evento_confirmar', { p_token: token, p_nome: nome || null, p_telefone: tel || null, p_pessoas: pessoas, p_obs: (f.get('obs') || '').trim() || null, p_cpf: cpf || null });
+    if (error) throw error;
+    try { localStorage.setItem(chave, JSON.stringify({ nome: (data && data.nome) || nome, pessoas })); } catch(e){}
+    EV.confirmados = (EV.confirmados || 0) + pessoas; mostrar(); scrollTo(0, 0);
+  } catch(e){ err.textContent = e.message || 'Não foi possível confirmar. Tente de novo.'; btn.disabled = false; btn.textContent = 'Confirmar presença'; }
+}
+async function compartilhar(){
+  const txt = `${EV.nome}${EV.data ? ' — ' + dataLonga(EV.data) : ''}`;
+  if (navigator.share){ try { await navigator.share({ title: EV.nome, text: txt, url: location.href }); } catch(e){} }
+  else location.href = 'https://wa.me/?text=' + encodeURIComponent(txt + '\n' + location.href);
+}
+iniciar();
+</script>
+</body>
+</html>

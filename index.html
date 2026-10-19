@@ -197,7 +197,7 @@ nav.tabs button.on{color:var(--accent)}
    Vazio = MODO DEMONSTRAÇÃO (dados ficam só no aparelho).
    ===================================================================== */
 const CFG = { url: 'https://cknzysljezvpazonvibb.supabase.co', key: 'sb_publishable_ji48PdmWNR5nvQkXMhbbCQ_DEekbpVL' };
-const VERSAO = 'v14';
+const VERSAO = 'v16';
 const DEMO = !CFG.url || !CFG.key;
 const sb = DEMO ? null : supabase.createClient(CFG.url, CFG.key);
 
@@ -263,7 +263,7 @@ const IC = {
 };
 
 /* ---------------- banco de dados (Supabase ou local) ---------------- */
-const TABELAS = ['afiliados','movimentos','eventos','evento_tarefas','evento_custos','alunos','usuarios','renovacoes','documentos','indicacoes','configuracoes','reunioes','planejamento'];
+const TABELAS = ['afiliados','movimentos','eventos','evento_tarefas','evento_custos','evento_confirmacoes','alunos','usuarios','renovacoes','documentos','indicacoes','configuracoes','reunioes','planejamento'];
 // CPF, documento e link de renovação não vêm nessas colunas: só o administrador recebe, à parte
 const COLS = { afiliados:'id,nome,telefone,endereco,valor_mensal,dia_vencimento,inicio,ativo,obs,criado_em,categoria,tamanho_camisa,cobrar_ate',
   movimentos:'id,data,descricao,nome,valor,categoria,afiliado_id,evento_id,origem,chave,criado_por,criado_em,obs,comprovante,descricao_publica,anexos,evento_categoria' };
@@ -272,9 +272,9 @@ const ehFin = () => S.me && S.me.papel !== 'adm';
 const Local = {
   db: null,
   load(){ if (this.db) return this.db;
-    this.db = LS.get('masto_demo', null) || { seq:1, afiliados:[], movimentos:[], eventos:[], evento_tarefas:[], evento_custos:[], alunos:[],
+    this.db = LS.get('masto_demo', null) || { seq:1, afiliados:[], movimentos:[], eventos:[], evento_tarefas:[], evento_custos:[], evento_confirmacoes:[], alunos:[],
       usuarios:[{email:'mastodontesjrp2017@gmail.com', nome:'Carlos Eduardo Moreno', papel:'adm', ativo:true}] };
-    this.db.evento_custos = this.db.evento_custos || []; this.db.alunos = this.db.alunos || [];
+    this.db.evento_custos = this.db.evento_custos || []; this.db.alunos = this.db.alunos || []; this.db.evento_confirmacoes = this.db.evento_confirmacoes || [];
     return this.db; },
   save(){ LS.set('masto_demo', this.db); }
 };
@@ -323,14 +323,14 @@ function erroMsg(e){ const m = e?.message || String(e);
   return m; }
 
 /* ---------------- estado ---------------- */
-const S = { me:null, tab: LS.get('masto_tab','inicio'), afiliados:[], movimentos:[], eventos:[], tarefas:[], custos:[], alunos:[], usuarios:[], renovacoes:[], documentos:[], indicacoes:[], configuracoes:[], reunioes:[], planejamento:[],
+const S = { me:null, tab: LS.get('masto_tab','inicio'), afiliados:[], movimentos:[], eventos:[], tarefas:[], custos:[], confirmacoes:[], alunos:[], usuarios:[], renovacoes:[], documentos:[], indicacoes:[], configuracoes:[], reunioes:[], planejamento:[],
   filtroAf:'todos', buscaAf:'', mesFin: hojeISO().slice(0,7), tipoFin:'saida', imp:null, impFiltro:'identificar', priv: LS.get('masto_priv',false) };
 
 async function carregar(...tabs){
   tabs = tabs.length ? tabs : TABELAS;
-  if (!DEMO && !ehAdm()) tabs = tabs.filter(t => !['renovacoes','indicacoes','reunioes','planejamento','alunos'].includes(t));
-  const map = {afiliados:'afiliados', movimentos:'movimentos', eventos:'eventos', evento_tarefas:'tarefas', evento_custos:'custos', alunos:'alunos', usuarios:'usuarios', renovacoes:'renovacoes', documentos:'documentos', indicacoes:'indicacoes', configuracoes:'configuracoes', reunioes:'reunioes', planejamento:'planejamento'};
-  await Promise.all(tabs.map(async t => { try { S[map[t]] = await DB.all(t); } catch(e){ if (['alunos','evento_custos','renovacoes','documentos','indicacoes','configuracoes','reunioes','planejamento'].includes(t)) S[map[t]] = []; else throw e; } }));
+  if (!DEMO && !ehAdm()) tabs = tabs.filter(t => !['renovacoes','indicacoes','reunioes','planejamento','alunos','evento_confirmacoes'].includes(t));
+  const map = {afiliados:'afiliados', movimentos:'movimentos', eventos:'eventos', evento_tarefas:'tarefas', evento_custos:'custos', evento_confirmacoes:'confirmacoes', alunos:'alunos', usuarios:'usuarios', renovacoes:'renovacoes', documentos:'documentos', indicacoes:'indicacoes', configuracoes:'configuracoes', reunioes:'reunioes', planejamento:'planejamento'};
+  await Promise.all(tabs.map(async t => { try { S[map[t]] = await DB.all(t); } catch(e){ if (['alunos','evento_confirmacoes','evento_custos','renovacoes','documentos','indicacoes','configuracoes','reunioes','planejamento'].includes(t)) S[map[t]] = []; else throw e; } }));
   if (!DEMO && ehAdm()){
     if (tabs.includes('afiliados')){
       const { data } = await sb.rpc('afiliados_privado');
@@ -1726,7 +1726,17 @@ function formEvento(id){
     <div class="g2"><div><label>Preço do ingresso</label><input name="preco_ingresso" inputmode="decimal" value="${valTxt(e.preco_ingresso)}" placeholder="vazio = sugerido"></div>
     <div><label>Orçamento total</label><input name="orcamento" inputmode="decimal" value="${valTxt(e.orcamento)}" placeholder="se não detalhar"></div></div>
     <div class="muted" style="margin-top:4px">Os custos previstos (estrutura, shows…) são lançados dentro do evento. O preço do ingresso fica vazio para o app sugerir.</div>
-    <label>Descrição / observações</label><textarea name="descricao">${esc(e.descricao)}</textarea>
+    <label>Descrição / observações</label><textarea name="descricao" placeholder="Aparece na página de divulgação">${esc(e.descricao)}</textarea>
+    <div class="sec-h" style="margin-top:14px"><h2 style="font-size:17px">Divulgação</h2></div>
+    <label class="row" style="font-weight:600;color:var(--ink)"><input type="checkbox" name="divulgar" ${e.divulgar?'checked':''} style="width:22px;height:22px;flex:none"> Página pública de divulgação ativa</label>
+    <label class="row" style="font-weight:600;color:var(--ink)"><input type="checkbox" name="aceita" ${e.aceita_confirmacao!==false?'checked':''} style="width:22px;height:22px;flex:none"> Pedir confirmação de presença</label>
+    <label>Quem pode participar</label><select name="quem">${Object.entries(QUEM_PART).map(([k,t])=>`<option value="${k}" ${k===(e.quem_participa||'todos')?'selected':''}>${t}</option>`).join('')}</select>
+    <div class="muted" style="margin-top:4px">Nos eventos exclusivos, a pessoa confirma com o CPF e o app só aceita quem está com as mensalidades em dia.</div>
+    <label class="row" style="font-weight:600;color:var(--ink)"><input type="checkbox" name="acomp" ${e.permite_acompanhantes!==false?'checked':''} style="width:22px;height:22px;flex:none"> Permitir acompanhantes</label>
+    <label>Arte de divulgação (imagem)</label>
+    ${e.arte ? `<img src="${esc(arteUrl(e.arte))}" alt="" style="width:100%;max-height:180px;object-fit:cover;border-radius:12px;margin-bottom:6px">` : ''}
+    <input type="file" name="arte" accept="image/*">
+    <div class="muted" style="margin-top:4px">A página mostra a data, o local com mapa e a descrição. Não coloque informações pessoais nela.</div>
     <div class="err" id="eErr"></div>
     <div class="row" style="margin-top:8px">${id?`<button type="button" class="btn danger" onclick="excluirEvento(${id})">Excluir</button>`:''}
       <button type="button" class="btn ghost grow" onclick="${id?`abrirEvento(${id})`:'fecharSheet()'}">Cancelar</button><button class="btn acc grow">Salvar</button></div>
@@ -1736,16 +1746,19 @@ function formEvento(id){
     const row = { nome:f.get('nome').trim(), data:f.get('data')||null, hora:f.get('hora').trim()||null, local:f.get('local').trim()||null,
       orcamento: num(f.get('orcamento')), status:f.get('status'), descricao:f.get('descricao').trim()||null,
       publico_previsto: parseInt(String(f.get('publico_previsto')).replace(/\D/g,''))||null, margem_desejada: +f.get('margem_desejada'),
-      patrocinio_previsto: num(f.get('patrocinio_previsto')), lucro_bar_previsto: num(f.get('lucro_bar_previsto')), preco_ingresso: num(f.get('preco_ingresso'))||null };
+      patrocinio_previsto: num(f.get('patrocinio_previsto')), lucro_bar_previsto: num(f.get('lucro_bar_previsto')), preco_ingresso: num(f.get('preco_ingresso'))||null, divulgar: !!f.get('divulgar'), aceita_confirmacao: !!f.get('aceita'), quem_participa: f.get('quem') || 'todos', permite_acompanhantes: !!f.get('acomp') };
+    const arte = ev.target.querySelector('[name=arte]').files[0];
+    const btn = ev.target.querySelector('button.acc'); btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Salvando…';
     try { let nid=id; if (id) await DB.upd('eventos',{id},row); else nid=(await DB.ins('eventos',row))[0].id;
-      await carregar('eventos'); toast('Evento salvo'); render(); abrirEvento(nid); } catch(e){ $('#eErr').textContent=erroMsg(e); }
+      if (arte) await enviarArte(nid, arte, e.arte);
+      await carregar('eventos'); toast('Evento salvo'); render(); abrirEvento(nid); } catch(err){ $('#eErr').textContent=erroMsg(err); btn.disabled = false; btn.textContent = 'Salvar'; }
   });
 }
 async function excluirEvento(id){
   const ok = await confirmar('Excluir este evento?', 'As tarefas do evento também serão apagadas. Os lançamentos financeiros continuam, só perdem o vínculo.');
   if (!ok) return;
   try { await DB.del('eventos',{id}); if (DEMO){ const db=Local.load(); db.evento_tarefas=db.evento_tarefas.filter(t=>t.evento_id!==id); db.evento_custos=db.evento_custos.filter(t=>t.evento_id!==id); Local.save(); }
-    await carregar('eventos','evento_tarefas','evento_custos','movimentos'); fecharSheet(); toast('Evento excluído'); render(); } catch(e){ toast(erroMsg(e)); } }
+    await carregar('eventos','evento_tarefas','evento_custos','evento_confirmacoes','movimentos'); fecharSheet(); toast('Evento excluído'); render(); } catch(e){ toast(erroMsg(e)); } }
 /* ---------- planejamento do evento ---------- */
 const CAT_EV = ['Estrutura / locação','Shows / bandas','Som e iluminação','Bar / bebidas','Alimentação','Divulgação','Equipe / segurança','Taxas / licenças','Outros'];
 const CAT_EV_ENT = ['Ingressos','Patrocínio','Vendas do bar'];
@@ -1813,6 +1826,8 @@ function abrirEvento(id){
   abrirSheet(`
     <div class="row">${evData(e)}<div class="grow"><h3>${esc(e.nome)}</h3><div class="muted">${esc([e.hora,e.local].filter(Boolean).join(' · '))}</div></div></div>
     ${e.descricao?`<p style="white-space:pre-wrap">${esc(e.descricao)}</p>`:''}
+    <div class="sec-h"><h2 style="font-size:18px">Divulgação</h2></div>
+    ${cardDivulgacao(e)}
     <div class="kpis" style="margin-top:12px">
       <div class="card kpi"><small>Custo previsto</small><b class="val">${brl(P.custoPrev)}</b></div>
       <div class="card kpi ${P.custoPrev&&sai>P.custoPrev?'bad':''}"><small>Gasto</small><b class="val">${brl(sai)}</b>${P.custoPrev?`<span class="muted">${Math.round(sai/P.custoPrev*100)}% do previsto</span>`:''}</div>
@@ -1940,6 +1955,59 @@ function novoDoPix(eid){ const d = S.pixLido || {};
 async function vincularPix(mid, eid){
   try { await DB.upd('movimentos',{id:mid},{evento_id:eid}); await carregar('movimentos'); render();
     formMov(mid, {voltar:eid}); toast('Vinculado. Escolha a categoria e anexe o comprovante, se quiser.'); } catch(e){ toast(erroMsg(e)); } }
+/* ---------- divulgação do evento (página pública + confirmação de presença) ---------- */
+const linkEvento = e => pastaApp() + 'evento.html?e=' + e.token_publico;
+const QUEM_PART = { todos:'Aberto ao público', associados:'Só associados em dia (contribuintes e fundadores)', contribuintes:'Só associados contribuintes em dia' };
+const regraTxt = e => e.quem_participa==='contribuintes' ? 'Exclusivo para associados contribuintes com as mensalidades em dia' : e.quem_participa==='associados' ? 'Exclusivo para associados com as mensalidades em dia' : '';
+const arteUrl = p => p ? `${CFG.url}/storage/v1/object/public/divulgacao/${p}` : '';
+const dataLonga = iso => iso ? new Date(iso + 'T12:00').toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long', year:'numeric'}) : '';
+function cardDivulgacao(e){
+  if (!e.divulgar) return `<div class="card" style="padding:14px"><b>Divulgar este evento</b>
+    <p class="muted" style="margin:4px 0 10px">Cria uma página com data, local, mapa${e.aceita_confirmacao!==false?' e confirmação de presença':''}, para mandar no WhatsApp e nas redes.</p>
+    <button class="btn acc wide" onclick="ativarDivulgacao(${e.id})">Ativar página de divulgação</button></div>`;
+  const conf = S.confirmacoes.filter(c=>c.evento_id===e.id), pess = conf.reduce((s,c)=>s+(+c.pessoas||0),0);
+  return `<div class="card" style="padding:14px">
+    ${regraTxt(e) ? `<div class="badge b-acc" style="white-space:normal;margin-bottom:8px">🔒 ${regraTxt(e)}${e.permite_acompanhantes===false?' · sem acompanhantes':''}</div>` : ''}
+    <div class="row"><b class="grow">Página de divulgação ativa</b><button class="lnk" style="color:var(--accent);font-weight:700" onclick="window.open(linkEvento(S.eventos.find(x=>x.id===${e.id})),'_blank')">Ver página ›</button></div>
+    ${e.arte ? `<img src="${esc(arteUrl(e.arte))}" alt="Arte do evento" style="width:100%;max-height:220px;object-fit:cover;border-radius:12px;margin-top:10px">` : `<p class="muted" style="margin:6px 0 0">Dica: em "Editar evento" dá para colocar a arte (imagem) de divulgação.</p>`}
+    <div class="g2" style="margin-top:10px"><button class="btn acc" onclick="divulgarWhats(${e.id})">${IC.wa} WhatsApp</button><button class="btn ghost" onclick="copiarLinkEvento(${e.id})">Copiar link</button></div>
+    ${e.aceita_confirmacao!==false ? `<button class="btn ghost wide" style="margin-top:8px" onclick="listaConfirmados(${e.id})">✅ ${pess} pessoa${pess!==1?'s':''} confirmada${pess!==1?'s':''} (${conf.length} resposta${conf.length!==1?'s':''}) ›</button>` : ''}</div>`;
+}
+async function ativarDivulgacao(id){
+  try { await DB.upd('eventos',{id},{divulgar:true}); await carregar('eventos'); toast('Página de divulgação ativa'); abrirEvento(id); } catch(e){ toast(erroMsg(e)); } }
+function textoDivulgacao(e){
+  return `🦣 *${e.nome}*\n📅 ${dataLonga(e.data)}${e.hora ? ' às ' + e.hora : ''}\n📍 ${e.local || 'Local a confirmar'}\n${regraTxt(e) ? '🔒 ' + regraTxt(e) + '\n' : ''}\n` +
+    (e.aceita_confirmacao!==false ? 'Veja os detalhes e confirme sua presença:\n' : 'Veja os detalhes:\n') + linkEvento(e); }
+function divulgarWhats(id){ const e = S.eventos.find(x=>x.id===id); if (e) window.open('https://wa.me/?text=' + encodeURIComponent(textoDivulgacao(e)), '_blank'); }
+async function copiarLinkEvento(id){ const e = S.eventos.find(x=>x.id===id); if (!e) return;
+  try { await navigator.clipboard.writeText(textoDivulgacao(e)); toast('Convite com link copiado'); } catch(err){ prompt('Copie o link:', linkEvento(e)); } }
+function listaConfirmados(id){
+  const e = S.eventos.find(x=>x.id===id); if (!e) return;
+  const conf = S.confirmacoes.filter(c=>c.evento_id===id).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+  const pess = conf.reduce((s,c)=>s+(+c.pessoas||0),0);
+  window._confTexto = `${e.nome} — ${fdata(e.data)}\nConfirmados: ${pess} pessoas\n\n` + conf.map((c,i)=>`${i+1}. ${c.nome} (${c.pessoas})${c.obs?' — '+c.obs:''}`).join('\n');
+  abrirSheet(`<h3>Confirmações</h3><p class="muted">${esc(e.nome)} · <b>${pess} pessoa${pess!==1?'s':''}</b> em ${conf.length} resposta${conf.length!==1?'s':''}</p>
+    ${conf.length ? `<div class="list">${conf.map(c=>`<div class="li" style="cursor:default"><div class="grow"><div class="t">${esc(c.nome)}</div>
+      <div class="s">${c.afiliado_id?'associado · ':''}${c.pessoas} pessoa${c.pessoas>1?'s':''} · ${esc(fmtTel(telConf(c)))}${c.obs?' · '+esc(c.obs):''}</div></div>
+      ${telConf(c)?`<a class="btn sm ghost" href="https://wa.me/55${dig(telConf(c))}" target="_blank" aria-label="WhatsApp">${IC.wa}</a>`:''}
+      <button class="lnk" style="color:var(--ink3);padding:8px" aria-label="Apagar" onclick="delConf(${c.id},${id})">✕</button></div>`).join('')}</div>`
+      : '<div class="card empty">Ninguém confirmou ainda.</div>'}
+    <div class="row" style="margin-top:12px">${conf.length?`<button class="btn ghost grow" onclick="copiarConfirmados()">Copiar lista</button>`:''}<button class="btn acc grow" onclick="abrirEvento(${id})">Voltar</button></div>`);
+}
+const telConf = c => c.telefone || (c.afiliado_id && S.afiliados.find(a=>a.id===c.afiliado_id)?.telefone) || '';
+async function copiarConfirmados(){ try { await navigator.clipboard.writeText(window._confTexto); toast('Lista copiada'); } catch(e){ prompt('Copie a lista:', window._confTexto); } }
+async function delConf(cid, eid){
+  if (!await confirmar('Apagar esta confirmação?')) return listaConfirmados(eid);
+  try { await DB.del('evento_confirmacoes',{id:cid}); await carregar('evento_confirmacoes'); listaConfirmados(eid); } catch(e){ toast(erroMsg(e)); } }
+async function enviarArte(eid, file, antiga){
+  if (DEMO) return toast('No modo demonstração a arte não é guardada.');
+  const blob = await reduzirImagem(file, 1600);
+  const path = `eventos/${eid}-${Date.now()}.jpg`;
+  const { error } = await sb.storage.from('divulgacao').upload(path, blob, { contentType:'image/jpeg' }); if (error) throw error;
+  await DB.upd('eventos', {id:eid}, {arte:path});
+  if (antiga) sb.storage.from('divulgacao').remove([antiga]).catch(()=>{});
+}
+
 async function tTog(tid, v, eid){ try { await DB.upd('evento_tarefas',{id:tid},{feito:v}); await carregar('evento_tarefas'); abrirEvento(eid); render(); } catch(e){ toast(erroMsg(e)); } }
 async function tDel(tid, eid){ try { await DB.del('evento_tarefas',{id:tid}); await carregar('evento_tarefas'); abrirEvento(eid); render(); } catch(e){ toast(erroMsg(e)); } }
 
