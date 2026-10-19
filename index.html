@@ -197,7 +197,7 @@ nav.tabs button.on{color:var(--accent)}
    Vazio = MODO DEMONSTRAÇÃO (dados ficam só no aparelho).
    ===================================================================== */
 const CFG = { url: 'https://cknzysljezvpazonvibb.supabase.co', key: 'sb_publishable_ji48PdmWNR5nvQkXMhbbCQ_DEekbpVL' };
-const VERSAO = 'v13';
+const VERSAO = 'v14';
 const DEMO = !CFG.url || !CFG.key;
 const sb = DEMO ? null : supabase.createClient(CFG.url, CFG.key);
 
@@ -263,7 +263,7 @@ const IC = {
 };
 
 /* ---------------- banco de dados (Supabase ou local) ---------------- */
-const TABELAS = ['afiliados','movimentos','eventos','evento_tarefas','evento_custos','usuarios','renovacoes','documentos','indicacoes','configuracoes','reunioes','planejamento'];
+const TABELAS = ['afiliados','movimentos','eventos','evento_tarefas','evento_custos','alunos','usuarios','renovacoes','documentos','indicacoes','configuracoes','reunioes','planejamento'];
 // CPF, documento e link de renovação não vêm nessas colunas: só o administrador recebe, à parte
 const COLS = { afiliados:'id,nome,telefone,endereco,valor_mensal,dia_vencimento,inicio,ativo,obs,criado_em,categoria,tamanho_camisa,cobrar_ate',
   movimentos:'id,data,descricao,nome,valor,categoria,afiliado_id,evento_id,origem,chave,criado_por,criado_em,obs,comprovante,descricao_publica,anexos,evento_categoria' };
@@ -272,9 +272,9 @@ const ehFin = () => S.me && S.me.papel !== 'adm';
 const Local = {
   db: null,
   load(){ if (this.db) return this.db;
-    this.db = LS.get('masto_demo', null) || { seq:1, afiliados:[], movimentos:[], eventos:[], evento_tarefas:[], evento_custos:[],
+    this.db = LS.get('masto_demo', null) || { seq:1, afiliados:[], movimentos:[], eventos:[], evento_tarefas:[], evento_custos:[], alunos:[],
       usuarios:[{email:'mastodontesjrp2017@gmail.com', nome:'Carlos Eduardo Moreno', papel:'adm', ativo:true}] };
-    this.db.evento_custos = this.db.evento_custos || [];
+    this.db.evento_custos = this.db.evento_custos || []; this.db.alunos = this.db.alunos || [];
     return this.db; },
   save(){ LS.set('masto_demo', this.db); }
 };
@@ -323,14 +323,14 @@ function erroMsg(e){ const m = e?.message || String(e);
   return m; }
 
 /* ---------------- estado ---------------- */
-const S = { me:null, tab: LS.get('masto_tab','inicio'), afiliados:[], movimentos:[], eventos:[], tarefas:[], custos:[], usuarios:[], renovacoes:[], documentos:[], indicacoes:[], configuracoes:[], reunioes:[], planejamento:[],
+const S = { me:null, tab: LS.get('masto_tab','inicio'), afiliados:[], movimentos:[], eventos:[], tarefas:[], custos:[], alunos:[], usuarios:[], renovacoes:[], documentos:[], indicacoes:[], configuracoes:[], reunioes:[], planejamento:[],
   filtroAf:'todos', buscaAf:'', mesFin: hojeISO().slice(0,7), tipoFin:'saida', imp:null, impFiltro:'identificar', priv: LS.get('masto_priv',false) };
 
 async function carregar(...tabs){
   tabs = tabs.length ? tabs : TABELAS;
-  if (!DEMO && !ehAdm()) tabs = tabs.filter(t => !['renovacoes','indicacoes','reunioes','planejamento'].includes(t));
-  const map = {afiliados:'afiliados', movimentos:'movimentos', eventos:'eventos', evento_tarefas:'tarefas', evento_custos:'custos', usuarios:'usuarios', renovacoes:'renovacoes', documentos:'documentos', indicacoes:'indicacoes', configuracoes:'configuracoes', reunioes:'reunioes', planejamento:'planejamento'};
-  await Promise.all(tabs.map(async t => { try { S[map[t]] = await DB.all(t); } catch(e){ if (['evento_custos','renovacoes','documentos','indicacoes','configuracoes','reunioes','planejamento'].includes(t)) S[map[t]] = []; else throw e; } }));
+  if (!DEMO && !ehAdm()) tabs = tabs.filter(t => !['renovacoes','indicacoes','reunioes','planejamento','alunos'].includes(t));
+  const map = {afiliados:'afiliados', movimentos:'movimentos', eventos:'eventos', evento_tarefas:'tarefas', evento_custos:'custos', alunos:'alunos', usuarios:'usuarios', renovacoes:'renovacoes', documentos:'documentos', indicacoes:'indicacoes', configuracoes:'configuracoes', reunioes:'reunioes', planejamento:'planejamento'};
+  await Promise.all(tabs.map(async t => { try { S[map[t]] = await DB.all(t); } catch(e){ if (['alunos','evento_custos','renovacoes','documentos','indicacoes','configuracoes','reunioes','planejamento'].includes(t)) S[map[t]] = []; else throw e; } }));
   if (!DEMO && ehAdm()){
     if (tabs.includes('afiliados')){
       const { data } = await sb.rpc('afiliados_privado');
@@ -577,8 +577,8 @@ const ABAS = [
 const ABAS_FIN = [ ['financeiro','Financeiro',IC.money], ['estatuto','Estatuto',IC.doc] ];
 const abasDoPerfil = () => ehAdm() || DEMO ? ABAS : ABAS_FIN;
 // telas que ficam dentro de "Mais"
-const DENTRO_MAIS = ['importar','estatuto','indicacoes','votantes','eventos'];
-const VIEWS = () => ({inicio:vInicio, afiliados:vAfiliados, financeiro:vFinanceiro, eventos:()=>{ S.agTab='eventos'; vAgenda(); }, agenda:vAgenda, plano:vPlano, mais:vMais, importar:vImportar, estatuto:vEstatuto, indicacoes:vIndicacoes, votantes:vVotantes});
+const DENTRO_MAIS = ['importar','estatuto','indicacoes','votantes','eventos','escola'];
+const VIEWS = () => ({inicio:vInicio, afiliados:vAfiliados, financeiro:vFinanceiro, eventos:()=>{ S.agTab='eventos'; vAgenda(); }, agenda:vAgenda, plano:vPlano, mais:vMais, importar:vImportar, estatuto:vEstatuto, indicacoes:vIndicacoes, votantes:vVotantes, escola:vEscola});
 const podeVer = k => abasDoPerfil().some(([x]) => x === k) || ((ehAdm() || DEMO) && DENTRO_MAIS.includes(k));
 async function abrirApp(){
   document.body.classList.toggle('priv', S.priv);
@@ -1131,12 +1131,154 @@ function vMais(){
   const est = S.documentos.filter(d=>d.tipo==='estatuto').length;
   const item = (k, ic, t, sub) => `<div class="li" onclick="ir('${k}')"><div class="avatar" style="color:var(--accent)">${ic}</div><div class="grow"><div class="t">${t}</div><div class="s">${sub}</div></div><span class="muted">›</span></div>`;
   $('#view').innerHTML = `<div class="list">
+    ${item('escola', '🎵', 'Escola de Música', (()=>{ const p = S.alunos.filter(a=>a.status==='pendente').length, n = S.alunos.filter(a=>a.status==='ativo').length; return p ? `${p} matrícula${p>1?'s':''} para aprovar · ${n} alunos` : `${n} aluno${n!==1?'s':''} · link de matrícula e termo de imagem`; })())}
     ${item('indicacoes', IC.star, 'Indicações de novos afiliados', pend ? `${pend} aguardando aprovação` : 'Cadastre indicações com foto')}
     ${item('estatuto', IC.doc, 'Estatuto', est ? 'Ver o estatuto da associação' : 'Nenhum estatuto enviado ainda')}
     ${item('votantes', IC.users, 'Assembleia: sócios com direito a voto', 'Lista do Art. 32, só com quem está quite')}
     ${item('importar', IC.up, 'Importar extrato', 'Excel, CSV ou PDF do banco')}
   </div>`;
 }
+
+/* =====================================================================
+   ESCOLA DE MÚSICA — ALUNOS (só administradores)
+   ===================================================================== */
+const TERMO_VERSAO = 'v1-2026-10';
+const pastaApp = () => location.origin + location.pathname.replace(/[^/]*$/, '');
+const linkMatricula = () => pastaApp() + 'matricula.html';
+const imgAluno = a => a.imagem_autorizada === true ? ['📷 imagem autorizada','b-emdia'] : a.imagem_autorizada === false ? ['🚫 sem uso de imagem','b-vence'] : ['imagem: sem resposta','b-mute'];
+function vEscola(){
+  const f = S.escFiltro || (S.alunos.some(a=>a.status==='pendente') ? 'pendente' : 'ativo');
+  const n = s => S.alunos.filter(a=>a.status===s).length;
+  const semImg = S.alunos.filter(a=>a.status==='ativo' && a.imagem_autorizada!==true).length;
+  $('#view').innerHTML = `
+    <button class="btn ghost sm" onclick="ir('mais')">‹ Voltar</button>
+    <div class="sec-h"><h2>Escola de Música</h2><span class="badge b-acc">${n('ativo')} aluno${n('ativo')!==1?'s':''}</span></div>
+    <div class="card"><b>Link de matrícula para os pais</b>
+      <p class="muted" style="margin:4px 0 0">Os pais preenchem a ficha e respondem o termo de uso de imagem pelo celular. A matrícula chega aqui como pendente para a diretoria aprovar.</p>
+      <div class="g2" style="margin-top:12px"><button class="btn acc" onclick="enviarLinkMatricula()">${IC.wa} Enviar no WhatsApp</button><button class="btn ghost" onclick="copiarLinkMatricula()">Copiar link</button></div>
+      <button class="btn ghost wide" style="margin-top:8px" onclick="window.open(pastaApp()+'matricula.html?imprimir','_blank')">Termo de imagem para imprimir</button></div>
+    ${semImg ? `<p class="muted" style="margin:12px 2px 0">⚠️ ${semImg} aluno${semImg>1?'s':''} ativo${semImg>1?'s':''} sem autorização de imagem: não publique fotos ${semImg>1?'deles':'dele'}.</p>` : ''}
+    <div class="seg" style="margin-top:12px">${[['pendente','Pendentes'],['ativo','Ativos'],['inativo','Inativos']].map(([k,t])=>`<button class="${f===k?'on':''}" onclick="S.escFiltro='${k}';vEscola()">${t} (${n(k)})</button>`).join('')}</div>
+    <div class="row" style="margin-top:10px"><input id="escBusca" class="grow" placeholder="Buscar aluno, responsável ou turma" value="${esc(S.escBusca||'')}" style="height:46px;border-radius:12px;border:1px solid var(--line);background:var(--card);padding:0 12px;font:inherit;color:var(--ink)">
+      <button class="btn sm ghost" style="height:46px" onclick="baixarAlunos()">Baixar</button></div>
+    <div id="escLista" style="margin-top:10px"></div>`;
+  $('#escBusca').oninput = e => { S.escBusca = e.target.value; listaAlunos(f); };
+  listaAlunos(f);
+  fab('formAluno()');
+}
+function listaAlunos(f){
+  const b = (S.escBusca||'').toLowerCase().trim();
+  const lst = S.alunos.filter(a=>a.status===f && (!b || [a.nome,a.responsavel_nome,a.turma,a.instrumento].join(' ').toLowerCase().includes(b)))
+    .sort((x,y)=>x.nome.localeCompare(y.nome,'pt-BR'));
+  $('#escLista').innerHTML = lst.length ? `<div class="list">${lst.map(a=>{ const [txt,cls] = imgAluno(a); const id = idade(a.nascimento);
+    return `<div class="li" onclick="abrirAluno(${a.id})"><div class="avatar">${esc(iniciais(a.nome))}</div><div class="grow"><div class="t">${esc(a.nome)}</div>
+      <div class="s">${[id!==null?id+' anos':'', a.instrumento, a.turma].filter(Boolean).map(esc).join(' · ') || '—'}</div></div>
+      <span class="badge ${cls}" style="font-size:12px">${txt.split(' ')[0]}</span></div>`; }).join('')}</div>`
+    : `<div class="card empty">${f==='pendente' ? 'Nenhuma matrícula aguardando aprovação.' : b ? 'Ninguém encontrado.' : 'Nenhum aluno aqui ainda.'}</div>`;
+}
+async function copiarLinkMatricula(){
+  try { await navigator.clipboard.writeText(linkMatricula()); toast('Link copiado'); } catch(e){ prompt('Copie o link:', linkMatricula()); } }
+function enviarLinkMatricula(){
+  const msg = `Olá! Aqui é da Associação Mastodonte 🦣🎵\nPara matricular seu filho(a) na Escola de Música, preencha a ficha neste link (leva uns 3 minutos). Nela também está o termo de uso de imagem, que é gratuito e opcional:\n${linkMatricula()}`;
+  window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank'); }
+function formAluno(id){
+  const a = id ? S.alunos.find(x=>x.id===id) : { status:'ativo' };
+  const imgAtual = a.imagem_autorizada === true ? 'sim' : a.imagem_autorizada === false ? 'nao' : '';
+  const turmas = [...new Set(S.alunos.map(x=>x.turma).filter(Boolean))];
+  abrirSheet(`<h3>${id?'Editar aluno':'Novo aluno'}</h3>
+  <form class="f" id="fAl">
+    <label>Nome do aluno *</label><input name="nome" required value="${esc(a.nome)}" autocomplete="off">
+    <div class="g2"><div><label>Nascimento *</label><input name="nasc" type="date" required value="${a.nascimento||''}"></div>
+    <div><label>Instrumento</label><input name="inst" list="instL" value="${esc(a.instrumento)}"></div></div>
+    <datalist id="instL">${['Violão','Teclado','Bateria','Canto','Flauta','Violino','Guitarra','Contrabaixo'].map(x=>`<option>${x}</option>`).join('')}</datalist>
+    <div class="g2"><div><label>Turma / horário</label><input name="turma" list="turL" value="${esc(a.turma)}" placeholder="Ex.: Sábado 9h"></div>
+    <div><label>Situação</label><select name="status">${['ativo','pendente','inativo'].map(s=>`<option ${s===a.status?'selected':''}>${s}</option>`).join('')}</select></div></div>
+    <datalist id="turL">${turmas.map(x=>`<option>${esc(x)}</option>`).join('')}</datalist>
+    <label>Cuidados importantes</label><textarea name="cuid" placeholder="Alergias, medicamentos, necessidades especiais">${esc(a.cuidados)}</textarea>
+    <div class="sec-h" style="margin-top:14px"><h2 style="font-size:17px">Responsável</h2></div>
+    <label>Nome *</label><input name="rnome" required value="${esc(a.responsavel_nome)}">
+    <div class="g2"><div><label>CPF</label><input name="rcpf" inputmode="numeric" value="${esc(fmtDoc(a.responsavel_cpf||''))}" placeholder="000.000.000-00"></div>
+    <div><label>Parentesco</label><input name="rpar" list="parL" value="${esc(a.responsavel_parentesco)}"></div></div>
+    <datalist id="parL">${['Mãe','Pai','Avó/Avô','Tio(a)','Tutor(a) / guardião legal'].map(x=>`<option>${x}</option>`).join('')}</datalist>
+    <div class="g2"><div><label>Telefone (WhatsApp) *</label><input name="rtel" inputmode="tel" required value="${esc(fmtTel(a.responsavel_telefone||''))}"></div>
+    <div><label>E-mail</label><input name="remail" type="email" value="${esc(a.responsavel_email)}"></div></div>
+    <label>Endereço</label><input name="end" value="${esc(a.endereco)}">
+    <div class="sec-h" style="margin-top:14px"><h2 style="font-size:17px">Uso de imagem</h2></div>
+    ${a.imagem_aceite_em ? `<p class="muted" style="margin:0 0 6px">Registrado em ${new Date(a.imagem_aceite_em).toLocaleString('pt-BR')} · ${esc(a.imagem_aceite_forma||'')}${a.imagem_revogada_em?' · cancelado em '+fdata(a.imagem_revogada_em):''}</p>` : ''}
+    <select name="img"><option value="" ${!imgAtual?'selected':''}>Ainda sem resposta</option>
+      <option value="sim" ${imgAtual==='sim'?'selected':''}>Autorizado (termo em papel assinado)</option>
+      <option value="nao" ${imgAtual==='nao'?'selected':''}>Não autorizado</option></select>
+    <div class="muted" style="margin-top:4px">Só marque "Autorizado" com o termo assinado pelo responsável em mãos (ou use o link, que registra o aceite).</div>
+    <label>Observações internas</label><textarea name="obs">${esc(a.obs)}</textarea>
+    <div class="err" id="alErr"></div>
+    <div class="row" style="margin-top:8px"><button type="button" class="btn ghost grow" onclick="${id?`abrirAluno(${id})`:'fecharSheet()'}">Cancelar</button><button class="btn acc grow">Salvar</button></div>
+  </form>`);
+  $('#fAl').addEventListener('submit', async ev => {
+    ev.preventDefault(); const f = new FormData(ev.target), err = $('#alErr');
+    const cpf = dig(f.get('rcpf')); if (cpf && !cpfOk(cpf)) return err.textContent = 'CPF do responsável inválido.';
+    if (dig(f.get('rtel')).length < 10) return err.textContent = 'Informe o telefone do responsável com DDD.';
+    const row = { nome: f.get('nome').trim(), nascimento: f.get('nasc') || null, instrumento: f.get('inst').trim() || null, turma: f.get('turma').trim() || null,
+      status: f.get('status'), cuidados: f.get('cuid').trim() || null, responsavel_nome: f.get('rnome').trim(), responsavel_cpf: cpf || null,
+      responsavel_parentesco: f.get('rpar').trim() || null, responsavel_telefone: dig(f.get('rtel')), responsavel_email: f.get('remail').trim() || null,
+      endereco: f.get('end').trim() || null, obs: f.get('obs').trim() || null };
+    const img = f.get('img');
+    if (img !== imgAtual){
+      if (img === 'sim') Object.assign(row, { imagem_autorizada: true, imagem_aceite_em: new Date().toISOString(), imagem_aceite_nome: row.responsavel_nome,
+        imagem_aceite_cpf: cpf || null, imagem_aceite_forma: 'termo em papel (registrado por ' + (S.me?.nome || 'diretoria') + ')', imagem_termo_versao: TERMO_VERSAO, imagem_revogada_em: null });
+      else if (img === 'nao') Object.assign(row, { imagem_autorizada: false, imagem_revogada_em: imgAtual === 'sim' ? new Date().toISOString() : null,
+        ...(imgAtual === 'sim' ? {} : { imagem_aceite_em: new Date().toISOString(), imagem_aceite_nome: row.responsavel_nome, imagem_aceite_forma: 'recusa registrada por ' + (S.me?.nome || 'diretoria') }) });
+      else Object.assign(row, { imagem_autorizada: null });
+    }
+    const id18 = idade(row.nascimento);
+    if (id18 !== null && (id18 < 8 || id18 > 16) && !await confirmar(`O aluno tem ${id18} anos`, 'A escola atende de 8 a 16 anos. Salvar mesmo assim?', 'Salvar')) return;
+    try { let nid = id; if (id) await DB.upd('alunos',{id},row); else nid = (await DB.ins('alunos',{...row, origem:'app'}))[0].id;
+      await carregar('alunos'); toast('Aluno salvo'); render(); abrirAluno(nid); } catch(e){ err.textContent = erroMsg(e); }
+  });
+}
+function abrirAluno(id){
+  const a = S.alunos.find(x=>x.id===id); if (!a) return;
+  const [txt, cls] = imgAluno(a); const id18 = idade(a.nascimento); const tel = dig(a.responsavel_telefone);
+  abrirSheet(`
+    <div class="row"><div class="avatar" style="width:56px;height:56px;font-size:20px">${esc(iniciais(a.nome))}</div>
+      <div class="grow"><h3 style="margin:0">${esc(a.nome)}</h3><div class="muted">${id18!==null?id18+' anos · ':''}${esc(a.status)}${a.origem==='link'?' · veio pelo link':''}</div></div></div>
+    <div style="margin-top:12px"><span class="badge ${cls}">${txt}</span></div>
+    ${a.cuidados ? `<div class="card" style="margin-top:12px;background:var(--warn-soft);border-color:transparent"><b>Cuidados importantes</b><div style="white-space:pre-wrap">${esc(a.cuidados)}</div></div>` : ''}
+    <dl class="kv">
+      <dt>Nascimento</dt><dd>${a.nascimento?fdata(a.nascimento):'—'}</dd>
+      <dt>Instrumento</dt><dd>${esc(a.instrumento)||'—'}</dd>
+      <dt>Turma</dt><dd>${esc(a.turma)||'—'}</dd>
+      <dt>Responsável</dt><dd>${esc(a.responsavel_nome)||'—'}${a.responsavel_parentesco?' ('+esc(a.responsavel_parentesco)+')':''}</dd>
+      <dt>CPF resp.</dt><dd>${esc(fmtDoc(a.responsavel_cpf||''))||'—'}</dd>
+      <dt>Telefone</dt><dd>${esc(fmtTel(tel))||'—'}</dd>
+      <dt>E-mail</dt><dd>${esc(a.responsavel_email)||'—'}</dd>
+      <dt>Endereço</dt><dd>${esc(a.endereco)||'—'}</dd>
+      <dt>Imagem</dt><dd>${a.imagem_aceite_em ? `${a.imagem_autorizada?'Autorizada':'Não autorizada'} em ${new Date(a.imagem_aceite_em).toLocaleString('pt-BR')} por ${esc(a.imagem_aceite_nome||'—')} · ${esc(a.imagem_aceite_forma||'')}${a.imagem_revogada_em?` · <b>cancelada em ${fdata(a.imagem_revogada_em)}</b>`:''}` : a.imagem_autorizada === true ? 'Autorizada' : a.imagem_autorizada === false ? 'Não autorizada' : 'Sem resposta ainda'}</dd>
+      ${a.obs?`<dt>Obs.</dt><dd>${esc(a.obs)}</dd>`:''}
+    </dl>
+    ${a.status==='pendente' ? `<div class="row" style="margin-top:14px"><button class="btn danger grow" onclick="statusAluno(${id},'inativo')">Recusar</button><button class="btn acc grow" onclick="statusAluno(${id},'ativo')">Aprovar matrícula</button></div>` : ''}
+    ${tel ? `<a class="btn ghost wide" style="margin-top:10px;display:block;text-align:center;text-decoration:none;color:var(--ink)" href="https://wa.me/55${tel}" target="_blank">${IC.wa} WhatsApp do responsável</a>` : ''}
+    ${a.imagem_autorizada === true ? `<button class="btn ghost wide" style="margin-top:8px" onclick="revogarImagem(${id})">Cancelar autorização de imagem</button>` : ''}
+    <div class="row" style="margin-top:10px">
+      ${a.status==='ativo' ? `<button class="btn ghost grow" onclick="statusAluno(${id},'inativo')">Desativar</button>` : a.status==='inativo' ? `<button class="btn ghost grow" onclick="statusAluno(${id},'ativo')">Reativar</button>` : ''}
+      <button class="btn ghost grow" onclick="formAluno(${id})">Editar</button></div>
+    <div class="row" style="margin-top:8px"><button class="btn danger grow" onclick="excluirAluno(${id})">Excluir</button><button class="btn ghost grow" onclick="fecharSheet()">Fechar</button></div>`);
+}
+async function statusAluno(id, st){
+  try { await DB.upd('alunos',{id},{status:st}); await carregar('alunos'); toast(st==='ativo'?'Matrícula ativa':'Aluno inativo'); render(); abrirAluno(id); } catch(e){ toast(erroMsg(e)); } }
+async function revogarImagem(id){
+  if (!await confirmar('Cancelar a autorização de imagem?', 'A partir de agora não publique fotos ou vídeos deste aluno e retire as publicações digitais da associação quando possível.', 'Cancelar autorização')) return abrirAluno(id);
+  try { await DB.upd('alunos',{id},{imagem_autorizada:false, imagem_revogada_em:new Date().toISOString()}); await carregar('alunos'); toast('Autorização cancelada'); render(); abrirAluno(id); } catch(e){ toast(erroMsg(e)); } }
+async function excluirAluno(id){
+  if (!await confirmar('Excluir este aluno?', 'O cadastro e o registro do termo de imagem serão apagados. Para guardar o histórico, prefira "Desativar".')) return abrirAluno(id);
+  try { await DB.del('alunos',{id}); await carregar('alunos'); fecharSheet(); toast('Aluno excluído'); render(); } catch(e){ toast(erroMsg(e)); } }
+async function baixarAlunos(){
+  try { if (!window.XLSX) await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
+    const lst = S.alunos.filter(a=>a.status==='ativo').sort((x,y)=>(x.turma||'').localeCompare(y.turma||'') || x.nome.localeCompare(y.nome,'pt-BR'));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(lst.map(a=>({ Aluno:a.nome, Idade:idade(a.nascimento) ?? '', Instrumento:a.instrumento||'', Turma:a.turma||'',
+      Responsável:a.responsavel_nome||'', Telefone:fmtTel(a.responsavel_telefone||''), 'Uso de imagem': a.imagem_autorizada===true?'AUTORIZADO':a.imagem_autorizada===false?'NÃO autorizado':'sem resposta', Cuidados:a.cuidados||'' }))), 'Alunos');
+    XLSX.writeFile(wb, `alunos-escola-musica-${hojeISO()}.xlsx`);
+  } catch(e){ toast(erroMsg(e)); } }
 
 /* =====================================================================
    ASSEMBLEIA — LISTA DE SÓCIOS COM DIREITO A VOTO (Art. 29 e 32)

@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Matrícula — Escola de Música Mastodonte</title>
+<meta name="theme-color" content="#141414">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{--bg:#f3efe6;--card:#fffdf8;--ink:#161513;--ink2:#4f4a43;--ink3:#6e685d;--line:#e3ddd0;--brand:#141414;--brand-ink:#f0eadc;--accent:#b8742a;--accent-soft:#f3e4cf;--ok:#2f7a4c;--ok-soft:#e1f0e5;--bad:#b8352a;--bad-soft:#f8dfdb;--slab:'Zilla Slab',Georgia,serif;color-scheme:light}
+@media(prefers-color-scheme:dark){:root{--bg:#121110;--card:#1c1b19;--ink:#efeae0;--ink2:#c9c2b4;--ink3:#a39c8f;--line:#2e2c28;--brand:#0a0a0a;--accent:#d8964b;--accent-soft:#3a2b1a;--ok:#5cbf83;--ok-soft:#173222;--bad:#ec6f62;--bad-soft:#3d1b17;color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.5 system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif}
+header{background:var(--brand);color:var(--brand-ink);padding:calc(18px + env(safe-area-inset-top,0px)) 18px 18px;display:flex;gap:12px;align-items:center}
+header img{width:52px;height:auto}
+header b{font-family:var(--slab);font-size:22px;letter-spacing:.06em;display:block}
+header small{opacity:.8}
+main{max-width:640px;margin:0 auto;padding:16px 16px calc(40px + env(safe-area-inset-bottom,0px))}
+h1,h2{font-family:var(--slab);line-height:1.2}
+h1{font-size:26px;margin:6px 0 4px}h2{font-size:20px;margin:22px 0 8px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+label{display:block;font-weight:700;color:var(--ink2);font-size:15px;margin:12px 0 5px}
+input,select,textarea{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 13px}
+textarea{min-height:80px;resize:vertical}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:420px){.g2{grid-template-columns:1fr}}
+.muted{color:var(--ink3);font-size:15px}
+.termo{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px;font-size:15px;max-height:340px;overflow:auto;white-space:pre-wrap}
+.op{display:flex;gap:10px;align-items:flex-start;border:2px solid var(--line);border-radius:12px;padding:12px;margin-top:10px;cursor:pointer;font-weight:600;color:var(--ink)}
+.op input{width:22px;height:22px;flex:none;margin:1px 0 0;accent-color:var(--accent)}
+.op:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.chk{display:flex;gap:10px;align-items:flex-start;font-weight:600;color:var(--ink);margin-top:16px}
+.chk input{width:22px;height:22px;flex:none;margin:1px 0 0;accent-color:var(--accent)}
+button{font:inherit;font-weight:700;border:0;border-radius:14px;padding:15px;width:100%;background:var(--accent);color:#fff;cursor:pointer;margin-top:18px}
+button:disabled{opacity:.6}
+.err{color:var(--bad);font-weight:600;margin-top:10px;min-height:1px}
+.ok{text-align:center;padding:30px 16px}.ok div{font-size:56px}
+.print-only{display:none}
+@media print{header,form,.no-print{display:none!important}.print-only{display:block}body,html{background:#fff;color:#000}.termo{max-height:none;border:0;padding:0;background:#fff;font-size:13px}main{padding:0}}
+</style>
+</head>
+<body>
+<header><img src="mamute.png" alt=""><div><b>MASTODONTE</b><small>Escola de Música</small></div></header>
+<main id="app"></main>
+<script>
+const CFG = { url: 'https://cknzysljezvpazonvibb.supabase.co', key: 'sb_publishable_ji48PdmWNR5nvQkXMhbbCQ_DEekbpVL' };
+const TERMO_VERSAO = 'v1-2026-10';
+const TERMO = `TERMO DE AUTORIZAÇÃO DE USO DE IMAGEM E VOZ — A TÍTULO GRATUITO
+
+Eu, responsável legal pelo(a) aluno(a) identificado(a) nesta ficha, autorizo a ASSOCIAÇÃO MASTODONTE, CNPJ 55.821.595/0001-38, a utilizar, a título gratuito, a imagem e a voz do(a) aluno(a), captadas em fotos e vídeos durante as aulas, ensaios, apresentações e demais atividades da Escola de Música.
+
+1. FINALIDADE. O uso se destina exclusivamente à divulgação das atividades culturais e educativas da Associação: redes sociais, site, materiais impressos, apresentações e prestação de contas a apoiadores e parceiros, sem qualquer fim comercial.
+
+2. GRATUIDADE. Esta autorização é gratuita: nada será pago ou cobrado, por nenhuma das partes, pelo uso da imagem e da voz. A matrícula e a participação nas aulas NÃO dependem desta autorização.
+
+3. PROTEÇÃO DA CRIANÇA E DO ADOLESCENTE. A imagem não será usada de forma que exponha o(a) aluno(a) a situação vexatória, constrangedora ou que viole sua dignidade, conforme o Estatuto da Criança e do Adolescente (Lei 8.069/1990). Não serão divulgados endereço, escola, telefone ou qualquer dado que permita localizar o(a) aluno(a).
+
+4. PRAZO E CANCELAMENTO. A autorização vale enquanto o(a) aluno(a) participar das atividades da Associação e pode ser cancelada a qualquer momento, sem custo, bastando comunicar a diretoria. Após o cancelamento, não haverá novas publicações, e as publicações digitais mantidas pela Associação serão retiradas sempre que possível. Materiais já impressos e distribuídos antes do cancelamento não poderão ser recolhidos.
+
+5. DADOS PESSOAIS. Os dados desta ficha são usados apenas para a matrícula, a organização das aulas e o contato com o responsável, conforme a Lei Geral de Proteção de Dados (Lei 13.709/2018), e não são compartilhados com terceiros.`;
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const dig = s => String(s ?? '').replace(/\D/g, '');
+function cpfOk(c){ c = dig(c); if (c.length !== 11 || /^(\d)\1+$/.test(c)) return false;
+  for (let t = 9; t < 11; t++){ let s = 0; for (let i = 0; i < t; i++) s += +c[i] * (t + 1 - i); if (((s * 10) % 11) % 10 !== +c[t]) return false; } return true; }
+function idade(iso){ if (!iso) return null; const n = new Date(iso + 'T12:00'), h = new Date(); let i = h.getFullYear() - n.getFullYear();
+  if (h.getMonth() < n.getMonth() || (h.getMonth() === n.getMonth() && h.getDate() < n.getDate())) i--; return i; }
+
+// ?imprimir → versão em papel do termo, com espaços para preencher e assinar
+if (new URLSearchParams(location.search).has('imprimir')){
+  $('#app').innerHTML = `<p class="no-print muted">Use o menu do navegador → Imprimir (ou Compartilhar → Imprimir) para gerar o papel ou PDF.</p>
+  <div class="termo" style="max-height:none">${esc(TERMO)}
+
+Nome do(a) aluno(a): ________________________________________   Nascimento: ___/___/______
+
+Nome do responsável: ________________________________________   CPF: ____________________
+
+Parentesco: ______________   Telefone: ____________________
+
+(   ) AUTORIZO o uso de imagem e voz nos termos acima.
+(   ) NÃO AUTORIZO o uso de imagem e voz.
+
+
+Local e data: ______________________, ___/___/______
+
+
+_______________________________________________
+Assinatura do responsável legal</div>
+  <button class="no-print" onclick="print()">Imprimir</button>`;
+} else formulario();
+
+function formulario(){
+  $('#app').innerHTML = `
+  <h1>Ficha de matrícula</h1>
+  <p class="muted">Escola de Música da Associação Mastodonte, para crianças e adolescentes de 8 a 16 anos. Preencha com os dados do aluno e do responsável. A diretoria confere e confirma a matrícula.</p>
+  <form id="f" novalidate>
+    <div class="card">
+      <h2 style="margin-top:0">Aluno(a)</h2>
+      <label>Nome completo *</label><input name="nome" required autocomplete="off">
+      <div class="g2"><div><label>Data de nascimento *</label><input name="nasc" type="date" required></div>
+      <div><label>Instrumento de interesse</label><input name="inst" list="insts" placeholder="Ex.: violão"></div></div>
+      <datalist id="insts"><option>Violão</option><option>Teclado</option><option>Bateria</option><option>Canto</option><option>Flauta</option><option>Violino</option><option>Guitarra</option><option>Contrabaixo</option></datalist>
+      <label>Cuidados importantes (opcional)</label><textarea name="cuid" placeholder="Alergias, medicamentos, necessidades especiais ou algo que os professores precisem saber"></textarea>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h2 style="margin-top:0">Responsável</h2>
+      <label>Nome completo *</label><input name="rnome" required autocomplete="name">
+      <div class="g2"><div><label>CPF *</label><input name="rcpf" inputmode="numeric" required placeholder="000.000.000-00"></div>
+      <div><label>Parentesco *</label><select name="rpar" required><option value="">— escolha —</option><option>Mãe</option><option>Pai</option><option>Avó/Avô</option><option>Tio(a)</option><option>Tutor(a) / guardião legal</option><option>Outro</option></select></div></div>
+      <div class="g2"><div><label>Telefone (WhatsApp) *</label><input name="rtel" inputmode="tel" required placeholder="(17) 99999-9999" autocomplete="tel"></div>
+      <div><label>E-mail</label><input name="remail" type="email" inputmode="email" autocomplete="email"></div></div>
+      <label>Endereço</label><input name="end" placeholder="Rua, número, bairro, cidade" autocomplete="street-address">
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h2 style="margin-top:0">Uso de imagem</h2>
+      <p class="muted" style="margin-top:0">Leia o termo abaixo. A matrícula vale com qualquer uma das respostas.</p>
+      <div class="termo">${esc(TERMO)}</div>
+      <label class="op"><input type="radio" name="img" value="sim"> AUTORIZO o uso de imagem e voz, de forma gratuita, nos termos acima</label>
+      <label class="op"><input type="radio" name="img" value="nao"> NÃO AUTORIZO o uso de imagem e voz</label>
+    </div>
+    <label class="chk"><input type="checkbox" name="decl"> Declaro que sou o responsável legal pelo(a) aluno(a) e que as informações desta ficha são verdadeiras.</label>
+    <div class="err" id="err"></div>
+    <button id="btn">Enviar matrícula</button>
+  </form>`;
+  $('#f').addEventListener('submit', enviar);
+}
+
+async function enviar(ev){
+  ev.preventDefault(); const f = new FormData(ev.target), err = $('#err'); err.textContent = '';
+  const nome = (f.get('nome')||'').trim(), rnome = (f.get('rnome')||'').trim();
+  if (!nome) return err.textContent = 'Informe o nome do aluno.';
+  const id = idade(f.get('nasc')); if (id === null) return err.textContent = 'Informe a data de nascimento do aluno.';
+  if (id < 0 || id > 30) return err.textContent = 'Confira a data de nascimento do aluno.';
+  if (!rnome) return err.textContent = 'Informe o nome do responsável.';
+  if (!cpfOk(f.get('rcpf'))) return err.textContent = 'CPF do responsável inválido. Confira os números.';
+  if (!f.get('rpar')) return err.textContent = 'Escolha o parentesco do responsável.';
+  if (dig(f.get('rtel')).length < 10) return err.textContent = 'Informe o telefone com DDD.';
+  if (!f.get('img')) return err.textContent = 'Escolha se autoriza ou não o uso de imagem.';
+  if (!f.get('decl')) return err.textContent = 'Marque a declaração de responsável legal.';
+  if ((id < 8 || id > 16) && !confirm(`O aluno tem ${id} anos. A escola atende de 8 a 16 anos. Enviar mesmo assim?`)) return;
+  const btn = $('#btn'); btn.disabled = true; btn.textContent = 'Enviando…';
+  try {
+    if (!window.supabase) throw new Error('Sem conexão. Verifique a internet e tente de novo.');
+    const sb = supabase.createClient(CFG.url, CFG.key);
+    const { error } = await sb.rpc('matricula_enviar', { p_nome: nome, p_nascimento: f.get('nasc'), p_instrumento: (f.get('inst')||'').trim() || null,
+      p_resp_nome: rnome, p_resp_cpf: dig(f.get('rcpf')), p_resp_parentesco: f.get('rpar'), p_resp_telefone: dig(f.get('rtel')),
+      p_resp_email: (f.get('remail')||'').trim() || null, p_endereco: (f.get('end')||'').trim() || null, p_cuidados: (f.get('cuid')||'').trim() || null,
+      p_imagem: f.get('img') === 'sim', p_termo_versao: TERMO_VERSAO });
+    if (error) throw error;
+    $('#app').innerHTML = `<div class="card ok"><div>🎵</div><h1>Matrícula enviada!</h1>
+      <p>Recebemos a ficha de <b>${esc(nome)}</b>. A diretoria vai conferir e entrar em contato pelo WhatsApp.</p>
+      <p class="muted">Uso de imagem: ${f.get('img') === 'sim' ? 'autorizado' : 'não autorizado'} em ${new Date().toLocaleString('pt-BR')}. Para mudar essa escolha a qualquer momento, fale com a diretoria.</p>
+      <button onclick="formulario()">Matricular outro filho(a)</button></div>`;
+    scrollTo(0,0);
+  } catch(e){ err.textContent = (e && e.message) || 'Não foi possível enviar. Tente de novo.'; btn.disabled = false; btn.textContent = 'Enviar matrícula'; }
+}
+</script>
+</body>
+</html>
