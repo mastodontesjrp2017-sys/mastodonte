@@ -197,7 +197,7 @@ nav.tabs button.on{color:var(--accent)}
    Vazio = MODO DEMONSTRAÇÃO (dados ficam só no aparelho).
    ===================================================================== */
 const CFG = { url: 'https://cknzysljezvpazonvibb.supabase.co', key: 'sb_publishable_ji48PdmWNR5nvQkXMhbbCQ_DEekbpVL' };
-const VERSAO = 'v16';
+const VERSAO = 'v17';
 const DEMO = !CFG.url || !CFG.key;
 const sb = DEMO ? null : supabase.createClient(CFG.url, CFG.key);
 
@@ -1971,6 +1971,7 @@ function cardDivulgacao(e){
     <div class="row"><b class="grow">Página de divulgação ativa</b><button class="lnk" style="color:var(--accent);font-weight:700" onclick="window.open(linkEvento(S.eventos.find(x=>x.id===${e.id})),'_blank')">Ver página ›</button></div>
     ${e.arte ? `<img src="${esc(arteUrl(e.arte))}" alt="Arte do evento" style="width:100%;max-height:220px;object-fit:cover;border-radius:12px;margin-top:10px">` : `<p class="muted" style="margin:6px 0 0">Dica: em "Editar evento" dá para colocar a arte (imagem) de divulgação.</p>`}
     <div class="g2" style="margin-top:10px"><button class="btn acc" onclick="divulgarWhats(${e.id})">${IC.wa} WhatsApp</button><button class="btn ghost" onclick="copiarLinkEvento(${e.id})">Copiar link</button></div>
+    ${e.aceita_confirmacao!==false ? botaoMinhaPresenca(e) : ''}
     ${e.aceita_confirmacao!==false ? `<button class="btn ghost wide" style="margin-top:8px" onclick="listaConfirmados(${e.id})">✅ ${pess} pessoa${pess!==1?'s':''} confirmada${pess!==1?'s':''} (${conf.length} resposta${conf.length!==1?'s':''}) ›</button>` : ''}</div>`;
 }
 async function ativarDivulgacao(id){
@@ -1988,13 +1989,41 @@ function listaConfirmados(id){
   window._confTexto = `${e.nome} — ${fdata(e.data)}\nConfirmados: ${pess} pessoas\n\n` + conf.map((c,i)=>`${i+1}. ${c.nome} (${c.pessoas})${c.obs?' — '+c.obs:''}`).join('\n');
   abrirSheet(`<h3>Confirmações</h3><p class="muted">${esc(e.nome)} · <b>${pess} pessoa${pess!==1?'s':''}</b> em ${conf.length} resposta${conf.length!==1?'s':''}</p>
     ${conf.length ? `<div class="list">${conf.map(c=>`<div class="li" style="cursor:default"><div class="grow"><div class="t">${esc(c.nome)}</div>
-      <div class="s">${c.afiliado_id?'associado · ':''}${c.pessoas} pessoa${c.pessoas>1?'s':''} · ${esc(fmtTel(telConf(c)))}${c.obs?' · '+esc(c.obs):''}</div></div>
+      <div class="s">${c.origem==='diretoria'?'diretoria · ':c.origem==='manual'?'incluído pela diretoria · ':c.afiliado_id?'associado · ':''}${[c.pessoas+' pessoa'+(c.pessoas>1?'s':''), fmtTel(telConf(c)), c.obs].filter(Boolean).map(esc).join(' · ')}</div></div>
       ${telConf(c)?`<a class="btn sm ghost" href="https://wa.me/55${dig(telConf(c))}" target="_blank" aria-label="WhatsApp">${IC.wa}</a>`:''}
       <button class="lnk" style="color:var(--ink3);padding:8px" aria-label="Apagar" onclick="delConf(${c.id},${id})">✕</button></div>`).join('')}</div>`
       : '<div class="card empty">Ninguém confirmou ainda.</div>'}
-    <div class="row" style="margin-top:12px">${conf.length?`<button class="btn ghost grow" onclick="copiarConfirmados()">Copiar lista</button>`:''}<button class="btn acc grow" onclick="abrirEvento(${id})">Voltar</button></div>`);
+    <button class="btn ghost wide" style="margin-top:12px" onclick="formConfManual(${id})">${IC.plus} Adicionar pessoa (convidado, equipe…)</button>
+    <div class="row" style="margin-top:8px">${conf.length?`<button class="btn ghost grow" onclick="copiarConfirmados()">Copiar lista</button>`:''}<button class="btn acc grow" onclick="abrirEvento(${id})">Voltar</button></div>`);
 }
 const telConf = c => c.telefone || (c.afiliado_id && S.afiliados.find(a=>a.id===c.afiliado_id)?.telefone) || '';
+const minhaConf = eid => S.me && S.confirmacoes.find(c=>c.evento_id===eid && c.usuario_email && c.usuario_email===String(S.me.email||'').toLowerCase());
+function botaoMinhaPresenca(e){
+  const c = minhaConf(e.id);
+  return c ? `<div class="row" style="margin-top:8px"><span class="badge b-emdia grow" style="text-align:center;padding:10px">✔ Sua presença está confirmada</span><button class="btn sm ghost" onclick="cancelarMinhaPresenca(${e.id})">Desfazer</button></div>`
+    : `<button class="btn ghost wide" style="margin-top:8px" onclick="confirmarMinhaPresenca(${e.id})">🙋 Confirmar minha presença (diretoria)</button>`;
+}
+async function confirmarMinhaPresenca(eid){
+  const nome = S.me?.nome || 'Diretoria', email = String(S.me?.email||'').toLowerCase();
+  const dup = S.confirmacoes.find(c=>c.evento_id===eid && !c.usuario_email && c.nome && c.nome.trim().toUpperCase()===nome.trim().toUpperCase());
+  if (dup && !await confirmar('Você já aparece na lista', `${dup.nome} já confirmou pela página. Confirmar de novo vai contar você duas vezes.`, 'Confirmar mesmo assim')) return abrirEvento(eid);
+  try { await DB.ins('evento_confirmacoes', { evento_id: eid, nome, pessoas: 1, usuario_email: email || null, origem: 'diretoria' });
+    await carregar('evento_confirmacoes'); toast('Presença confirmada'); abrirEvento(eid); } catch(e){ toast(erroMsg(e)); } }
+async function cancelarMinhaPresenca(eid){ const c = minhaConf(eid); if (!c) return;
+  try { await DB.del('evento_confirmacoes',{id:c.id}); await carregar('evento_confirmacoes'); toast('Confirmação desfeita'); abrirEvento(eid); } catch(e){ toast(erroMsg(e)); } }
+function formConfManual(eid){
+  abrirSheet(`<h3>Adicionar pessoa</h3><p class="muted">Para quem não confirma pela página: equipe, músicos, convidados da diretoria. Entra na contagem de pessoas.</p>
+  <form class="f" id="fCm"><label>Nome *</label><input name="nome" required>
+    <div class="g2"><div><label>Quantas pessoas</label><input name="p" type="number" min="1" max="20" value="1" required></div>
+    <div><label>WhatsApp</label><input name="tel" inputmode="tel"></div></div>
+    <label>Observação</label><input name="obs" placeholder="Ex.: equipe do bar">
+    <div class="err" id="cmErr"></div>
+    <div class="row" style="margin-top:8px"><button type="button" class="btn ghost grow" onclick="listaConfirmados(${eid})">Cancelar</button><button class="btn acc grow">Adicionar</button></div></form>`);
+  $('#fCm').addEventListener('submit', async ev => { ev.preventDefault(); const f = new FormData(ev.target);
+    const p = parseInt(f.get('p')); if (!(p>=1 && p<=20)) return $('#cmErr').textContent = 'Quantidade inválida.';
+    try { await DB.ins('evento_confirmacoes', { evento_id: eid, nome: f.get('nome').trim(), pessoas: p, telefone: dig(f.get('tel')) || null, obs: f.get('obs').trim() || null, origem: 'manual' });
+      await carregar('evento_confirmacoes'); toast('Pessoa adicionada'); listaConfirmados(eid); } catch(e){ $('#cmErr').textContent = erroMsg(e); } });
+}
 async function copiarConfirmados(){ try { await navigator.clipboard.writeText(window._confTexto); toast('Lista copiada'); } catch(e){ prompt('Copie a lista:', window._confTexto); } }
 async function delConf(cid, eid){
   if (!await confirmar('Apagar esta confirmação?')) return listaConfirmados(eid);
