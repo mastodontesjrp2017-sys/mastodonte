@@ -197,7 +197,7 @@ nav.tabs button.on{color:var(--accent)}
    Vazio = MODO DEMONSTRAÇÃO (dados ficam só no aparelho).
    ===================================================================== */
 const CFG = { url: 'https://cknzysljezvpazonvibb.supabase.co', key: 'sb_publishable_ji48PdmWNR5nvQkXMhbbCQ_DEekbpVL' };
-const VERSAO = 'v12';
+const VERSAO = 'v13';
 const DEMO = !CFG.url || !CFG.key;
 const sb = DEMO ? null : supabase.createClient(CFG.url, CFG.key);
 
@@ -263,17 +263,18 @@ const IC = {
 };
 
 /* ---------------- banco de dados (Supabase ou local) ---------------- */
-const TABELAS = ['afiliados','movimentos','eventos','evento_tarefas','usuarios','renovacoes','documentos','indicacoes','configuracoes','reunioes','planejamento'];
+const TABELAS = ['afiliados','movimentos','eventos','evento_tarefas','evento_custos','usuarios','renovacoes','documentos','indicacoes','configuracoes','reunioes','planejamento'];
 // CPF, documento e link de renovação não vêm nessas colunas: só o administrador recebe, à parte
 const COLS = { afiliados:'id,nome,telefone,endereco,valor_mensal,dia_vencimento,inicio,ativo,obs,criado_em,categoria,tamanho_camisa,cobrar_ate',
-  movimentos:'id,data,descricao,nome,valor,categoria,afiliado_id,evento_id,origem,chave,criado_por,criado_em,obs,comprovante,descricao_publica,anexos' };
+  movimentos:'id,data,descricao,nome,valor,categoria,afiliado_id,evento_id,origem,chave,criado_por,criado_em,obs,comprovante,descricao_publica,anexos,evento_categoria' };
 const ehAdm = () => S.me && S.me.papel === 'adm';
 const ehFin = () => S.me && S.me.papel !== 'adm';
 const Local = {
   db: null,
   load(){ if (this.db) return this.db;
-    this.db = LS.get('masto_demo', null) || { seq:1, afiliados:[], movimentos:[], eventos:[], evento_tarefas:[],
+    this.db = LS.get('masto_demo', null) || { seq:1, afiliados:[], movimentos:[], eventos:[], evento_tarefas:[], evento_custos:[],
       usuarios:[{email:'mastodontesjrp2017@gmail.com', nome:'Carlos Eduardo Moreno', papel:'adm', ativo:true}] };
+    this.db.evento_custos = this.db.evento_custos || [];
     return this.db; },
   save(){ LS.set('masto_demo', this.db); }
 };
@@ -322,14 +323,14 @@ function erroMsg(e){ const m = e?.message || String(e);
   return m; }
 
 /* ---------------- estado ---------------- */
-const S = { me:null, tab: LS.get('masto_tab','inicio'), afiliados:[], movimentos:[], eventos:[], tarefas:[], usuarios:[], renovacoes:[], documentos:[], indicacoes:[], configuracoes:[], reunioes:[], planejamento:[],
+const S = { me:null, tab: LS.get('masto_tab','inicio'), afiliados:[], movimentos:[], eventos:[], tarefas:[], custos:[], usuarios:[], renovacoes:[], documentos:[], indicacoes:[], configuracoes:[], reunioes:[], planejamento:[],
   filtroAf:'todos', buscaAf:'', mesFin: hojeISO().slice(0,7), tipoFin:'saida', imp:null, impFiltro:'identificar', priv: LS.get('masto_priv',false) };
 
 async function carregar(...tabs){
   tabs = tabs.length ? tabs : TABELAS;
   if (!DEMO && !ehAdm()) tabs = tabs.filter(t => !['renovacoes','indicacoes','reunioes','planejamento'].includes(t));
-  const map = {afiliados:'afiliados', movimentos:'movimentos', eventos:'eventos', evento_tarefas:'tarefas', usuarios:'usuarios', renovacoes:'renovacoes', documentos:'documentos', indicacoes:'indicacoes', configuracoes:'configuracoes', reunioes:'reunioes', planejamento:'planejamento'};
-  await Promise.all(tabs.map(async t => { try { S[map[t]] = await DB.all(t); } catch(e){ if (['renovacoes','documentos','indicacoes','configuracoes','reunioes','planejamento'].includes(t)) S[map[t]] = []; else throw e; } }));
+  const map = {afiliados:'afiliados', movimentos:'movimentos', eventos:'eventos', evento_tarefas:'tarefas', evento_custos:'custos', usuarios:'usuarios', renovacoes:'renovacoes', documentos:'documentos', indicacoes:'indicacoes', configuracoes:'configuracoes', reunioes:'reunioes', planejamento:'planejamento'};
+  await Promise.all(tabs.map(async t => { try { S[map[t]] = await DB.all(t); } catch(e){ if (['evento_custos','renovacoes','documentos','indicacoes','configuracoes','reunioes','planejamento'].includes(t)) S[map[t]] = []; else throw e; } }));
   if (!DEMO && ehAdm()){
     if (tabs.includes('afiliados')){
       const { data } = await sb.rpc('afiliados_privado');
@@ -1404,11 +1405,12 @@ function formMov(id, pre={}){
       <button type="button" data-t="entrada" class="${tipo==='entrada'?'on':''}" ${id&&m.origem==='extrato'?'disabled':''}>Entrada</button></div>
     <input type="hidden" name="tipo" value="${tipo}">
     <div class="g2"><div><label>Data</label><input name="data" type="date" value="${m.data}" required ${m.origem==='extrato'?'readonly':''}></div>
-    <div><label>Valor</label><input name="valor" inputmode="decimal" required value="${id||pre.valor?String(Math.abs(m.valor)).replace('.',','):''}" ${m.origem==='extrato'?'readonly':''}></div></div>
+    <div><label>Valor</label><input name="valor" inputmode="decimal" required value="${id||pre.preencher?String(Math.abs(m.valor)).replace('.',','):''}" ${m.origem==='extrato'?'readonly':''}></div></div>
     <label>Descrição</label><input name="descricao" required value="${esc(m.origem==='extrato' ? (m.nome||m.descricao) : m.descricao)}" ${m.origem==='extrato'?'readonly':''}>
     <label>Categoria</label><select name="categoria" id="mCat"></select>
     <div id="mAfBox"><label>Mensalidade de (afiliado)</label><select name="afiliado_id"><option value="">— nenhum —</option>${opsAf.map(a=>`<option value="${a.id}" ${a.id===m.afiliado_id?'selected':''}>${esc(a.nome)}</option>`).join('')}</select></div>
     <label>Evento</label><select name="evento_id"><option value="">— nenhum —</option>${S.eventos.map(e=>`<option value="${e.id}" ${e.id===m.evento_id?'selected':''}>${esc(e.nome)}${e.data?' ('+fdata(e.data)+')':''}</option>`).join('')}</select>
+    <div id="evCatBox"><label>Categoria no evento</label><select name="evento_categoria"></select></div>
     <label>Detalhes internos (para que foi, quem recebeu)</label><textarea name="obs" placeholder="Ex.: pago ao açougue do João, nota 1234">${esc(m.obs)}</textarea>
     <div id="pubBox"><label>Descrição para os associados 👁️</label><input name="descricao_publica" maxlength="120" value="${esc(m.descricao_publica)}" placeholder="Ex.: Carne e carvão para o churrasco de 12/10">
     <div class="muted" style="margin-top:4px">Aparece na página de transparência. Não escreva nome de pessoa nem de empresa.</div></div>
@@ -1433,12 +1435,17 @@ function formMov(id, pre={}){
   $('#arqMov').onchange = e => { const fs = [...e.target.files];
     $('#arqSel').innerHTML = fs.length ? `<b style="color:var(--ink)">${fs.length} arquivo${fs.length>1?'s':''} para anexar:</b> ${fs.map(f=>esc(f.name)).join(', ')}<br>Toque em Salvar para enviar.` : ''; };
   $('#fMov [name=afiliado_id]').onchange = e => { if (e.target.value) $('#mCat').value = 'Mensalidade'; };
+  const setEvCat = () => { const eid = +$('#fMov [name=evento_id]').value; $('#evCatBox').classList.toggle('hide', !eid);
+    const cur = $('#fMov [name=evento_categoria]').value || m.evento_categoria || '';
+    $('#fMov [name=evento_categoria]').innerHTML = '<option value="">— sem categoria —</option>' + catsEvento(eid, cur).map(c=>`<option ${c===cur?'selected':''}>${esc(c)}</option>`).join(''); };
+  $('#fMov [name=evento_id]').onchange = setEvCat; setEvCat();
   $('#fMov').addEventListener('submit', async ev => {
     ev.preventDefault(); const f = new FormData(ev.target); const t = f.get('tipo');
     const v = Math.abs(parseFloat(String(f.get('valor')).replace(/\./g,'').replace(',','.')));
     if (!(v>0)) return $('#mErr').textContent='Valor inválido.';
     const afId = t==='entrada' && f.get('afiliado_id') ? +f.get('afiliado_id') : null;
     const row = { categoria: afId ? 'Mensalidade' : f.get('categoria'), afiliado_id: afId, evento_id: f.get('evento_id') ? +f.get('evento_id') : null,
+      evento_categoria: f.get('evento_id') ? (f.get('evento_categoria') || null) : null,
       obs: (f.get('obs')||'').trim() || null, descricao_publica: t==='saida' ? ((f.get('descricao_publica')||'').trim() || null) : null };
     if (m.origem!=='extrato') Object.assign(row, { data: f.get('data'), valor: t==='entrada'? v : -v, descricao: f.get('descricao').trim() });
     const arqs = [...ev.target.querySelector('[name=arq]').files];
@@ -1446,7 +1453,8 @@ function formMov(id, pre={}){
     try { let mid = id;
       if (id) await DB.upd('movimentos',{id},row); else mid = (await DB.ins('movimentos',{...row, origem:'manual'}))[0]?.id;
       if (arqs.length && mid) await enviarComprovantes(mid, arqs, m.anexos || []);
-      await carregar('movimentos'); fecharSheet(); toast(arqs.length ? `Salvo com ${arqs.length} comprovante${arqs.length>1?'s':''}` : 'Salvo'); render();
+      await carregar('movimentos'); toast(arqs.length ? `Salvo com ${arqs.length} comprovante${arqs.length>1?'s':''}` : 'Salvo'); render();
+      const volta = pre.voltar || pre.evento_id; if (volta && S.eventos.some(x=>x.id===volta)) abrirEvento(volta); else fecharSheet();
     } catch(e){ $('#mErr').textContent=erroMsg(e); btn.disabled = false; btn.textContent = 'Salvar'; }
   });
 }
@@ -1567,8 +1575,15 @@ function formEvento(id){
     <label>Nome do evento *</label><input name="nome" required value="${esc(e.nome)}">
     <div class="g2"><div><label>Data</label><input name="data" type="date" value="${e.data||''}"></div><div><label>Horário</label><input name="hora" value="${esc(e.hora)}" placeholder="19h"></div></div>
     <label>Local</label><input name="local" value="${esc(e.local)}">
-    <div class="g2"><div><label>Orçamento</label><input name="orcamento" inputmode="decimal" value="${e.orcamento?String(e.orcamento).replace('.',','):''}" placeholder="0,00"></div>
-    <div><label>Situação</label><select name="status">${['planejado','confirmado','realizado','cancelado'].map(s=>`<option ${s===e.status?'selected':''}>${s}</option>`).join('')}</select></div></div>
+    <label>Situação</label><select name="status">${['planejado','confirmado','realizado','cancelado'].map(s=>`<option ${s===e.status?'selected':''}>${s}</option>`).join('')}</select>
+    <div class="sec-h" style="margin-top:14px"><h2 style="font-size:17px">Planejamento financeiro</h2></div>
+    <div class="g2"><div><label>Ingressos previstos</label><input name="publico_previsto" inputmode="numeric" value="${e.publico_previsto||''}" placeholder="600"></div>
+    <div><label>Margem de lucro</label><select name="margem_desejada">${MARGENS.map(x=>`<option value="${x}" ${Math.abs(x-(e.margem_desejada==null?0.2:+e.margem_desejada))<0.001?'selected':''}>${Math.round(x*100)}%</option>`).join('')}</select></div></div>
+    <div class="g2"><div><label>Patrocínio previsto</label><input name="patrocinio_previsto" inputmode="decimal" value="${valTxt(e.patrocinio_previsto)}" placeholder="0,00"></div>
+    <div><label>Lucro previsto do bar</label><input name="lucro_bar_previsto" inputmode="decimal" value="${valTxt(e.lucro_bar_previsto)}" placeholder="0,00"></div></div>
+    <div class="g2"><div><label>Preço do ingresso</label><input name="preco_ingresso" inputmode="decimal" value="${valTxt(e.preco_ingresso)}" placeholder="vazio = sugerido"></div>
+    <div><label>Orçamento total</label><input name="orcamento" inputmode="decimal" value="${valTxt(e.orcamento)}" placeholder="se não detalhar"></div></div>
+    <div class="muted" style="margin-top:4px">Os custos previstos (estrutura, shows…) são lançados dentro do evento. O preço do ingresso fica vazio para o app sugerir.</div>
     <label>Descrição / observações</label><textarea name="descricao">${esc(e.descricao)}</textarea>
     <div class="err" id="eErr"></div>
     <div class="row" style="margin-top:8px">${id?`<button type="button" class="btn danger" onclick="excluirEvento(${id})">Excluir</button>`:''}
@@ -1577,7 +1592,9 @@ function formEvento(id){
   $('#fEv').addEventListener('submit', async ev => {
     ev.preventDefault(); const f = new FormData(ev.target);
     const row = { nome:f.get('nome').trim(), data:f.get('data')||null, hora:f.get('hora').trim()||null, local:f.get('local').trim()||null,
-      orcamento: parseFloat(String(f.get('orcamento')).replace(/\./g,'').replace(',','.'))||0, status:f.get('status'), descricao:f.get('descricao').trim()||null };
+      orcamento: num(f.get('orcamento')), status:f.get('status'), descricao:f.get('descricao').trim()||null,
+      publico_previsto: parseInt(String(f.get('publico_previsto')).replace(/\D/g,''))||null, margem_desejada: +f.get('margem_desejada'),
+      patrocinio_previsto: num(f.get('patrocinio_previsto')), lucro_bar_previsto: num(f.get('lucro_bar_previsto')), preco_ingresso: num(f.get('preco_ingresso'))||null };
     try { let nid=id; if (id) await DB.upd('eventos',{id},row); else nid=(await DB.ins('eventos',row))[0].id;
       await carregar('eventos'); toast('Evento salvo'); render(); abrirEvento(nid); } catch(e){ $('#eErr').textContent=erroMsg(e); }
   });
@@ -1585,36 +1602,202 @@ function formEvento(id){
 async function excluirEvento(id){
   const ok = await confirmar('Excluir este evento?', 'As tarefas do evento também serão apagadas. Os lançamentos financeiros continuam, só perdem o vínculo.');
   if (!ok) return;
-  try { await DB.del('eventos',{id}); if (DEMO){ const db=Local.load(); db.evento_tarefas=db.evento_tarefas.filter(t=>t.evento_id!==id); Local.save(); }
-    await carregar('eventos','evento_tarefas','movimentos'); fecharSheet(); toast('Evento excluído'); render(); } catch(e){ toast(erroMsg(e)); } }
+  try { await DB.del('eventos',{id}); if (DEMO){ const db=Local.load(); db.evento_tarefas=db.evento_tarefas.filter(t=>t.evento_id!==id); db.evento_custos=db.evento_custos.filter(t=>t.evento_id!==id); Local.save(); }
+    await carregar('eventos','evento_tarefas','evento_custos','movimentos'); fecharSheet(); toast('Evento excluído'); render(); } catch(e){ toast(erroMsg(e)); } }
+/* ---------- planejamento do evento ---------- */
+const CAT_EV = ['Estrutura / locação','Shows / bandas','Som e iluminação','Bar / bebidas','Alimentação','Divulgação','Equipe / segurança','Taxas / licenças','Outros'];
+const CAT_EV_ENT = ['Ingressos','Patrocínio','Vendas do bar'];
+const MARGENS = [0.10, 0.15, 0.20, 0.25, 0.30];
+const num = s => parseFloat(String(s ?? '').replace(/\s|R\$/g,'').replace(/\./g,'').replace(',','.')) || 0;
+const valTxt = v => Number(v) ? String(v).replace('.',',') : '';
+function catsEvento(eid, cur){
+  const extra = S.custos.filter(c=>c.evento_id===eid).map(c=>c.categoria);
+  return [...new Set([...CAT_EV, ...CAT_EV_ENT, ...extra, ...(cur?[cur]:[])])];
+}
+function planoEvento(e){
+  const custos = S.custos.filter(c=>c.evento_id===e.id);
+  const custoPrev = custos.length ? custos.reduce((s,c)=>s+Number(c.valor_previsto||0),0) : Number(e.orcamento)||0;
+  return { custos, custoPrev, publico: +e.publico_previsto || 0, patroc: Number(e.patrocinio_previsto)||0,
+    margem: e.margem_desejada==null ? 0.2 : Number(e.margem_desejada), bar: Number(e.lucro_bar_previsto)||0 };
+}
+// ingresso + patrocínio pagam os custos com a margem desejada; o bar é lucro extra
+function precoIngresso(P, margem){
+  const meta = Math.max(0, P.custoPrev/(1-margem) - P.patroc);
+  return { meta, preco: P.publico>0 ? Math.ceil(meta/P.publico/5)*5 : 0 };
+}
 function abrirEvento(id){
   const e = S.eventos.find(x=>x.id===id); if (!e) return;
   const t = S.tarefas.filter(x=>x.evento_id===id).sort((a,b)=>(a.feito-b.feito)||a.id-b.id);
   const movs = S.movimentos.filter(m=>m.evento_id===id && m.valor);
   const ent = movs.filter(m=>m.valor>0).reduce((s,m)=>s+m.valor,0), sai = movs.filter(m=>m.valor<0).reduce((s,m)=>s-m.valor,0);
-  const orc = Number(e.orcamento)||0;
+  const P = planoEvento(e);
+  const sug = precoIngresso(P, P.margem);
+  const preco = Number(e.preco_ingresso) || sug.preco;
+  const bilheteria = preco * P.publico;
+  const lucroIng = bilheteria + P.patroc - P.custoPrev;
+  const margemReal = bilheteria + P.patroc ? lucroIng/(bilheteria + P.patroc) : 0;
+  // gasto por categoria (previsto x realizado)
+  const gastoCat = {}; movs.filter(m=>m.valor<0).forEach(m=>{ const k = m.evento_categoria || 'Sem categoria'; gastoCat[k] = (gastoCat[k]||0) - m.valor; });
+  const prevCat = {}; P.custos.forEach(c=>{ prevCat[c.categoria] = (prevCat[c.categoria]||0) + Number(c.valor_previsto||0); });
+  const cats = [...new Set([...Object.keys(prevCat), ...Object.keys(gastoCat)])];
+  const barra = (v, max) => { const pc = max ? Math.min(100, v/max*100) : (v?100:0);
+    return `<div style="height:6px;background:var(--line);border-radius:4px;margin-top:6px"><div style="width:${pc}%;height:100%;border-radius:4px;background:${max && v>max ? 'var(--bad)' : 'var(--accent)'}"></div></div>`; };
+  const linhaCat = k => { const pv = prevCat[k]||0, g = gastoCat[k]||0; const itens = P.custos.filter(c=>c.categoria===k);
+    return `<div style="padding:12px 0;border-top:1px solid var(--line)">
+      <div class="row"><b class="grow">${esc(k)}</b><span class="val ${pv && g>pv ? 'neg' : ''}">${brl(g)}</span><span class="muted">&nbsp;/ ${pv ? brl(pv) : 'sem previsão'}</span></div>
+      ${barra(g, pv)}
+      ${itens.length ? `<div class="muted" style="margin-top:6px">${itens.map(c=>`<button class="lnk" style="padding:2px 0;color:var(--ink2)" onclick="formCusto(${id},${c.id})">${esc(c.descricao || 'previsto')}: ${brl(c.valor_previsto)} ✎</button>`).join('<br>')}</div>` : ''}</div>`; };
+
+  const temPlano = P.publico && P.custoPrev;
+  const plano = temPlano ? `
+    <div class="card" style="padding:14px">
+      <div class="row"><div class="grow"><small class="muted">Preço do ingresso ${Number(e.preco_ingresso) ? 'definido' : 'sugerido'}</small>
+        <div style="font-family:var(--slab);font-size:28px;font-weight:700">${brl(preco)}</div></div>
+        <div style="text-align:right"><small class="muted">${P.publico.toLocaleString('pt-BR')} ingressos</small><div><b>margem ${Math.round(margemReal*100)}%</b></div></div></div>
+      <div style="overflow-x:auto;margin-top:10px"><table style="width:100%;border-collapse:collapse;font-size:14px;text-align:center">
+        <tr>${MARGENS.map(x=>`<th style="padding:6px 4px;color:var(--ink3);font-weight:700">${Math.round(x*100)}%</th>`).join('')}</tr>
+        <tr>${MARGENS.map(x=>`<td style="padding:6px 4px;border-top:1px solid var(--line);${Math.abs(x-P.margem)<0.001?'font-weight:700;color:var(--accent)':''}">${brl(precoIngresso(P,x).preco)}</td>`).join('')}</tr></table></div>
+      <div class="muted" style="margin-top:4px">Preço por margem de lucro (arredondado para cima em R$ 5).</div>
+      <div style="margin-top:12px;line-height:1.9">
+        <div class="row"><span class="grow">Custos previstos</span><b class="val">${brl(P.custoPrev)}</b></div>
+        <div class="row"><span class="grow">Bilheteria prevista</span><b class="val">${brl(bilheteria)}</b></div>
+        ${P.patroc ? `<div class="row"><span class="grow">Patrocínio previsto</span><b class="val">${brl(P.patroc)}</b></div>` : ''}
+        <div class="row"><span class="grow">Lucro com ingressos</span><b class="val ${lucroIng>=0?'pos':'neg'}">${brl(lucroIng)}</b></div>
+        ${P.bar ? `<div class="row"><span class="grow">+ Lucro previsto do bar</span><b class="val pos">${brl(P.bar)}</b></div>
+        <div class="row"><span class="grow"><b>Lucro total previsto</b></span><b class="val ${lucroIng+P.bar>=0?'pos':'neg'}">${brl(lucroIng + P.bar)}</b></div>` : ''}
+      </div></div>`
+    : `<div class="card" style="padding:14px"><p class="muted" style="margin:0">Para o app sugerir o preço do ingresso, informe a quantidade de ingressos (em "Editar evento") e lance os custos previstos abaixo.</p></div>`;
+
   abrirSheet(`
     <div class="row">${evData(e)}<div class="grow"><h3>${esc(e.nome)}</h3><div class="muted">${esc([e.hora,e.local].filter(Boolean).join(' · '))}</div></div></div>
     ${e.descricao?`<p style="white-space:pre-wrap">${esc(e.descricao)}</p>`:''}
     <div class="kpis" style="margin-top:12px">
-      <div class="card kpi"><small>Orçamento</small><b class="val">${brl(orc)}</b></div>
-      <div class="card kpi ${orc&&sai>orc?'bad':''}"><small>Gasto</small><b class="val">${brl(sai)}</b>${orc?`<span class="muted">${Math.round(sai/orc*100)}% do orçamento</span>`:''}</div>
+      <div class="card kpi"><small>Custo previsto</small><b class="val">${brl(P.custoPrev)}</b></div>
+      <div class="card kpi ${P.custoPrev&&sai>P.custoPrev?'bad':''}"><small>Gasto</small><b class="val">${brl(sai)}</b>${P.custoPrev?`<span class="muted">${Math.round(sai/P.custoPrev*100)}% do previsto</span>`:''}</div>
       <div class="card kpi ok"><small>Arrecadado</small><b class="val">${brl(ent)}</b></div>
       <div class="card kpi"><small>Resultado</small><b class="val ${ent-sai>=0?'pos':'neg'}">${brl(ent-sai)}</b></div>
     </div>
+    <div class="sec-h"><h2 style="font-size:18px">Planejamento</h2><button class="btn sm ghost" onclick="formEvento(${id})">Editar</button></div>
+    ${plano}
+    <div class="sec-h"><h2 style="font-size:18px">Previsto x gasto</h2><button class="btn sm ghost" onclick="formCusto(${id})">${IC.plus} Custo previsto</button></div>
+    <div class="card" style="padding:2px 14px">${cats.length ? cats.map(linhaCat).join('') : '<div class="empty" style="padding:14px">Lance os custos previstos (estrutura, shows, som…) para acompanhar o gasto de cada um.</div>'}</div>
     <div class="sec-h"><h2 style="font-size:18px">Tarefas</h2><span class="muted">${t.filter(x=>x.feito).length}/${t.length}</span></div>
     <div class="card" style="padding:4px 14px">${t.length ? t.map(x=>`<div class="task ${x.feito?'done':''}"><input type="checkbox" ${x.feito?'checked':''} onchange="tTog(${x.id},this.checked,${id})">
       <div class="grow"><div>${esc(x.descricao)}</div>${x.responsavel||x.prazo?`<div class="muted">${esc([x.responsavel, x.prazo&&('até '+fdata(x.prazo))].filter(Boolean).join(' · '))}</div>`:''}</div>
       <button class="lnk" style="color:var(--ink3);padding:8px" aria-label="Apagar tarefa" onclick="tDel(${x.id},${id})">✕</button></div>`).join('') : '<div class="empty" style="padding:14px">Nenhuma tarefa.</div>'}</div>
     <form class="f" id="fT" style="margin-top:8px"><div class="row"><input name="d" placeholder="Nova tarefa (ex.: contratar som)" required class="grow"><button class="btn sm acc" style="height:46px" aria-label="Adicionar tarefa">${IC.plus}</button></div>
       <div class="g2" style="margin-top:6px"><input name="r" placeholder="Responsável"><input name="p" type="date" title="Prazo"></div></form>
-    <div class="sec-h"><h2 style="font-size:18px">Financeiro do evento</h2><button class="btn sm ghost" onclick="formMov(null,{evento_id:${id},valor:-1})">${IC.plus} Lançar</button></div>
-    ${movs.length?`<div class="list">${movs.sort((a,b)=>b.data.localeCompare(a.data)).map(linhaMov).join('')}</div>`:'<p class="muted">Lance gastos e arrecadações aqui ou vincule lançamentos do extrato a este evento.</p>'}
+    <div class="sec-h"><h2 style="font-size:18px">Gastos e entradas</h2></div>
+    <div class="g2" style="margin-bottom:8px">
+      <button class="btn acc" onclick="formMov(null,{evento_id:${id},valor:-1,categoria:'Eventos'})">${IC.plus} Lançar gasto</button>
+      <button class="btn ghost" onclick="colarPix(${id})">Colar comprovante Pix</button></div>
+    <button class="btn ghost wide" style="margin-bottom:10px" onclick="vincularExtrato(${id})">Vincular lançamentos do extrato</button>
+    ${movs.length?`<div class="list">${movs.sort((a,b)=>b.data.localeCompare(a.data)).map(m=>linhaMov(m).replace(`formMov(${m.id})`,`formMov(${m.id},{voltar:${id}})`)).join('')}</div>`:'<p class="muted">Lance gastos com foto do recibo, cole o comprovante do Pix ou vincule lançamentos que já vieram do extrato.</p>'}
     <div class="row" style="margin-top:14px"><button class="btn ghost grow" onclick="formEvento(${id})">Editar evento</button><button class="btn ghost grow" onclick="fecharSheet()">Fechar</button></div>`);
   $('#fT').addEventListener('submit', async ev => { ev.preventDefault(); const f=new FormData(ev.target);
     try { await DB.ins('evento_tarefas',{evento_id:id, descricao:f.get('d').trim(), responsavel:f.get('r').trim()||null, prazo:f.get('p')||null});
       await carregar('evento_tarefas'); abrirEvento(id); } catch(e){ toast(erroMsg(e)); } });
 }
+function formCusto(eid, cid){
+  const c = cid ? S.custos.find(x=>x.id===cid) : {};
+  const ops = [...new Set([...CAT_EV, ...S.custos.filter(x=>x.evento_id===eid).map(x=>x.categoria)])];
+  abrirSheet(`<h3>${cid?'Custo previsto':'Novo custo previsto'}</h3>
+  <form class="f" id="fCu">
+    <label>Categoria</label><select name="categoria">${ops.map(o=>`<option ${o===c.categoria?'selected':''}>${esc(o)}</option>`).join('')}</select>
+    <label>Descrição</label><input name="descricao" value="${esc(c.descricao)}" placeholder="Ex.: palco e tenda, banda X">
+    <label>Valor previsto</label><input name="valor" inputmode="decimal" required value="${valTxt(c.valor_previsto)}" placeholder="0,00">
+    <div class="err" id="cuErr"></div>
+    <div class="row" style="margin-top:8px">${cid?`<button type="button" class="btn danger" onclick="excluirCusto(${eid},${cid})">Excluir</button>`:''}
+      <button type="button" class="btn ghost grow" onclick="abrirEvento(${eid})">Cancelar</button><button class="btn acc grow">Salvar</button></div>
+  </form>`);
+  $('#fCu').addEventListener('submit', async ev => { ev.preventDefault(); const f = new FormData(ev.target);
+    const v = num(f.get('valor')); if (!(v>0)) return $('#cuErr').textContent = 'Valor inválido.';
+    const row = { evento_id: eid, categoria: f.get('categoria'), descricao: f.get('descricao').trim() || null, valor_previsto: v };
+    try { if (cid) await DB.upd('evento_custos',{id:cid},row); else await DB.ins('evento_custos',row);
+      await carregar('evento_custos'); toast('Custo salvo'); abrirEvento(eid); } catch(e){ $('#cuErr').textContent = erroMsg(e); } });
+}
+async function excluirCusto(eid, cid){
+  if (!await confirmar('Excluir este custo previsto?')) return abrirEvento(eid);
+  try { await DB.del('evento_custos',{id:cid}); await carregar('evento_custos'); abrirEvento(eid); } catch(e){ toast(erroMsg(e)); } }
+
+/* ---------- vincular lançamentos do extrato ao evento ---------- */
+function vincularExtrato(eid, tipo='saida', busca=''){
+  const e = S.eventos.find(x=>x.id===eid); if (!e) return;
+  const ref = new Date(e.data || hojeISO());
+  let lst = S.movimentos.filter(m=>!m.evento_id && !m.afiliado_id && (tipo==='saida' ? m.valor<0 : m.valor>0));
+  if (busca){ const b = busca.toLowerCase(), bv = num(busca);
+    lst = lst.filter(m=>[m.nome,m.descricao,m.obs,m.descricao_publica,m.categoria].join(' ').toLowerCase().includes(b) || (bv && Math.abs(Math.abs(m.valor)-bv)<0.005)); }
+  lst = lst.sort((a,b)=>Math.abs(new Date(a.data)-ref)-Math.abs(new Date(b.data)-ref)).slice(0,80);
+  const cats = tipo==='saida' ? catsEvento(eid).filter(c=>!CAT_EV_ENT.includes(c)) : CAT_EV_ENT;
+  abrirSheet(`<h3>Vincular ao evento</h3>
+    <p class="muted">${esc(e.nome)} · aparecem primeiro os lançamentos mais próximos da data do evento.</p>
+    <div class="seg" style="margin-bottom:10px"><button class="${tipo==='saida'?'on':''}" onclick="vincularExtrato(${eid},'saida')">Saídas</button><button class="${tipo==='entrada'?'on':''}" onclick="vincularExtrato(${eid},'entrada')">Entradas</button></div>
+    <form class="f" id="fBus"><div class="row"><input name="b" class="grow" value="${esc(busca)}" placeholder="Buscar nome, descrição ou valor"><button class="btn sm ghost" style="height:46px">Buscar</button></div></form>
+    <form class="f" id="fVin">
+      <label>Categoria no evento</label><select name="cat"><option value="">— sem categoria —</option>${cats.map(c=>`<option>${esc(c)}</option>`).join('')}</select>
+      <div class="list" style="margin-top:10px">${lst.length ? lst.map(m=>`<label class="li" style="cursor:pointer"><input type="checkbox" name="ids" value="${m.id}" style="width:22px;height:22px;accent-color:var(--accent);flex:none">
+        <div class="grow"><div class="t">${esc(m.nome||m.descricao)}</div><div class="s">${fdata(m.data)} · ${esc(m.categoria||'—')}${m.origem==='extrato'?' · extrato':''}</div></div>
+        <div class="v val ${m.valor>0?'pos':'neg'}">${brl(m.valor)}</div></label>`).join('') : '<div class="empty" style="padding:14px">Nenhum lançamento sem evento encontrado.</div>'}</div>
+      <div class="err" id="vErr"></div>
+      <div class="row" style="margin-top:10px"><button type="button" class="btn ghost grow" onclick="abrirEvento(${eid})">Voltar</button><button class="btn acc grow">Vincular selecionados</button></div>
+    </form>`);
+  $('#fBus').addEventListener('submit', ev => { ev.preventDefault(); vincularExtrato(eid, tipo, new FormData(ev.target).get('b').trim()); });
+  $('#fVin').addEventListener('submit', async ev => { ev.preventDefault(); const f = new FormData(ev.target);
+    const ids = f.getAll('ids').map(Number); if (!ids.length) return $('#vErr').textContent = 'Marque pelo menos um lançamento.';
+    const btn = ev.target.querySelector('button.acc'); btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Vinculando…';
+    try { for (const mid of ids) await DB.upd('movimentos',{id:mid},{evento_id:eid, evento_categoria: f.get('cat') || null});
+      await carregar('movimentos'); toast(`${ids.length} lançamento${ids.length>1?'s':''} vinculado${ids.length>1?'s':''}`); render(); abrirEvento(eid);
+    } catch(e){ $('#vErr').textContent = erroMsg(e); btn.disabled = false; btn.textContent = 'Vincular selecionados'; } });
+}
+
+/* ---------- ler texto do comprovante de Pix ---------- */
+function lerPix(txt){
+  const t = String(txt).replace(/\r/g,''); const out = {};
+  const v = t.match(/R\$\s*([\d.]+,\d{2})/) || t.match(/valor[^\d\n]{0,25}([\d.]+,\d{2})/i);
+  if (v) out.valor = num(v[1]);
+  const MES = {jan:1,fev:2,mar:3,abr:4,mai:5,jun:6,jul:7,ago:8,set:9,out:10,nov:11,dez:12};
+  let d = t.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+  if (d) out.data = `${d[3]}-${d[2]}-${d[1]}`;
+  else if ((d = t.match(/(\d{1,2})\s*(?:de\s+)?(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)[a-zç]*\.?\s*(?:de\s+)?(\d{4})/i)))
+    out.data = `${d[3]}-${String(MES[d[2].toLowerCase()]).padStart(2,'0')}-${d[1].padStart(2,'0')}`;
+  const linhas = t.split('\n').map(x=>x.trim()).filter(Boolean);
+  const kw = /^(para|destino|destinat[aá]rio|recebedor|favorecido|quem recebeu|dados do recebedor|nome do recebedor|pago para|transfer[eê]ncia para)\b\s*:?\s*(.*)$/i;
+  for (let i=0; i<linhas.length; i++){ const m = linhas[i].match(kw); if (!m) continue;
+    let k = i+1, nome = m[2].replace(/^nome\s*:?\s*/i,'').trim();
+    while (!nome && k < linhas.length && k <= i+3){ nome = linhas[k].replace(/^nome\s*:?\s*/i,'').trim(); k++; }
+    if (nome && !/R\$|\d{2}\/\d{2}/.test(nome)) out.nome = nome.slice(0,80); break; }
+  const id = t.match(/\bE[0-9A-Za-z]{31}\b/); if (id) out.idTx = id[0];
+  return out;
+}
+function colarPix(eid){
+  abrirSheet(`<h3>Comprovante de Pix</h3>
+    <p class="muted">No app do banco, abra o comprovante, copie o texto (ou use "compartilhar → copiar") e cole aqui. O app preenche valor, data e quem recebeu.</p>
+    <form class="f" id="fPix"><textarea name="t" rows="8" required placeholder="Cole aqui o texto do comprovante"></textarea>
+      <div class="err" id="pErr"></div>
+      <div class="row" style="margin-top:8px"><button type="button" class="btn ghost grow" onclick="abrirEvento(${eid})">Voltar</button><button class="btn acc grow">Ler comprovante</button></div></form>`);
+  $('#fPix').addEventListener('submit', ev => { ev.preventDefault();
+    const d = lerPix(new FormData(ev.target).get('t'));
+    if (!d.valor) return $('#pErr').textContent = 'Não encontrei o valor (R$) no texto. Confira se copiou o comprovante inteiro.';
+    S.pixLido = d;
+    // o mesmo Pix pode já ter vindo pelo extrato: evita lançar duas vezes
+    const dia = 864e5, cand = S.movimentos.filter(m=>m.valor<0 && Math.abs(-m.valor - d.valor) < 0.005 && (!d.data || Math.abs(new Date(m.data)-new Date(d.data)) <= 3*dia));
+    if (!cand.length) return novoDoPix(eid);
+    abrirSheet(`<h3>Esse Pix já pode estar no app</h3>
+      <p class="muted">Encontrei ${cand.length>1?'lançamentos':'um lançamento'} de ${brl(d.valor)}${d.data?' perto de '+fdata(d.data):''}. Vincule ao evento para não contar o gasto duas vezes.</p>
+      <div class="list">${cand.map(m=>`<div class="li"><div class="grow"><div class="t">${esc(m.nome||m.descricao)}</div><div class="s">${fdata(m.data)}${m.origem==='extrato'?' · extrato':''}${m.evento_id?' · '+esc(S.eventos.find(x=>x.id===m.evento_id)?.nome||'outro evento'):''}</div></div>
+        ${m.evento_id===eid ? '<span class="badge b-emdia">já vinculado</span>' : `<button class="btn sm acc" onclick="vincularPix(${m.id},${eid})">Vincular</button>`}</div>`).join('')}</div>
+      <div class="row" style="margin-top:12px"><button class="btn ghost grow" onclick="abrirEvento(${eid})">Voltar</button><button class="btn ghost grow" onclick="novoDoPix(${eid})">Lançar como novo</button></div>`);
+  });
+}
+function novoDoPix(eid){ const d = S.pixLido || {};
+  formMov(null, { evento_id: eid, valor: -d.valor, preencher: true, categoria: 'Eventos', data: d.data || hojeISO(),
+    descricao: d.nome ? 'Pix para ' + d.nome : 'Pagamento via Pix',
+    obs: [d.nome && 'Recebedor: ' + d.nome, d.idTx && 'ID do Pix: ' + d.idTx].filter(Boolean).join(' · ') || null });
+  toast('Confira os dados, escolha a categoria e anexe o comprovante.');
+}
+async function vincularPix(mid, eid){
+  try { await DB.upd('movimentos',{id:mid},{evento_id:eid}); await carregar('movimentos'); render();
+    formMov(mid, {voltar:eid}); toast('Vinculado. Escolha a categoria e anexe o comprovante, se quiser.'); } catch(e){ toast(erroMsg(e)); } }
 async function tTog(tid, v, eid){ try { await DB.upd('evento_tarefas',{id:tid},{feito:v}); await carregar('evento_tarefas'); abrirEvento(eid); render(); } catch(e){ toast(erroMsg(e)); } }
 async function tDel(tid, eid){ try { await DB.del('evento_tarefas',{id:tid}); await carregar('evento_tarefas'); abrirEvento(eid); render(); } catch(e){ toast(erroMsg(e)); } }
 
