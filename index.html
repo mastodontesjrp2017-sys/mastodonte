@@ -197,7 +197,7 @@ nav.tabs button.on{color:var(--accent)}
    Vazio = MODO DEMONSTRAÇÃO (dados ficam só no aparelho).
    ===================================================================== */
 const CFG = { url: 'https://cknzysljezvpazonvibb.supabase.co', key: 'sb_publishable_ji48PdmWNR5nvQkXMhbbCQ_DEekbpVL' };
-const VERSAO = 'v18';
+const VERSAO = 'v19';
 const DEMO = !CFG.url || !CFG.key;
 const sb = DEMO ? null : supabase.createClient(CFG.url, CFG.key);
 
@@ -246,6 +246,7 @@ const LS = { get(k,d){ try{ const v=localStorage.getItem(k); return v==null?d:JS
 function loadScript(src){ return new Promise((ok,err)=>{ const s=document.createElement('script'); s.src=src; s.onload=ok; s.onerror=()=>err(new Error('Falha ao carregar '+src)); document.head.appendChild(s); }); }
 
 const IC = {
+  back:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
   home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>',
   users:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17 14.5c2.4.2 4 1.8 4.5 4.5"/></svg>',
   userplus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="8" r="3.5"/><path d="M3 20c.8-3.6 3.6-5.5 7-5.5 1.6 0 3 .4 4.2 1.1"/><path d="M19 14v6M16 17h6"/></svg>',
@@ -584,6 +585,7 @@ async function abrirApp(){
   document.body.classList.toggle('priv', S.priv);
   $('#app').innerHTML = `
     <header class="top">
+      <button class="iconbtn hide" id="btVoltar" title="Voltar" aria-label="Voltar" onclick="voltar()" style="margin-left:-8px">${IC.back}</button>
       <img src="mamute.png" alt="">
       <div class="tt"><b>MASTODONTE</b><small>Olá, ${esc((S.me.nome||'').split(' ')[0])}</small></div>
       <button class="iconbtn" title="Ocultar valores" aria-label="Ocultar valores" onclick="togglePriv()">${IC.eye}</button>
@@ -595,17 +597,36 @@ async function abrirApp(){
     <nav class="tabs">${abasDoPerfil().map(([k,n,i])=>`<button data-k="${k}" onclick="ir('${k}')">${i}<span>${n}</span></button>`).join('')}</nav>
     <div id="fabRoot"></div>`;
   try { await carregar(); await desligarNaoRenovados(); } catch(e){ $('#view').innerHTML = `<div class="card"><b>Erro ao carregar dados</b><p class="muted">${esc(erroMsg(e))}</p><button class="btn" onclick="abrirApp()">Tentar de novo</button></div>`; return; }
-  ir(S.tab);
+  S.hist = [];
+  ir(S.tab, true);
+  ativarVoltarDoCelular();
 }
 function togglePriv(){ S.priv=!S.priv; LS.set('masto_priv',S.priv); document.body.classList.toggle('priv', S.priv); }
-function ir(k){
+function ir(k, voltando=false){
   if (!podeVer(k)) k = abasDoPerfil()[0][0];
+  S.hist = S.hist || [];
+  if (!voltando && S.tab && S.tab !== k){ S.hist.push(S.tab); if (S.hist.length > 30) S.hist.shift(); }
   S.tab = k; LS.set('masto_tab', k);
+  const bv = $('#btVoltar'); if (bv) bv.classList.toggle('hide', !temOndeVoltar());
   const marca = k==='eventos' ? 'agenda' : DENTRO_MAIS.includes(k) && (ehAdm() || DEMO) ? 'mais' : k;
   document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.toggle('on', b.dataset.k===marca));
   $('#fabRoot').innerHTML = '';
   (VIEWS()[k] || vInicio)();
   window.scrollTo(0,0);
+}
+/* ---------- seta voltar (no topo e no botão/gesto de voltar do celular) ---------- */
+const temOndeVoltar = () => (S.hist||[]).length > 0 || (DENTRO_MAIS.includes(S.tab) && (ehAdm() || DEMO));
+function voltar(){
+  const dlg = document.querySelector('.ov.ov2'); if (dlg){ dlg.querySelector('[data-v="0"]')?.click(); return true; }
+  if ($('#sheetRoot').innerHTML){ fecharSheet(); return true; }
+  if ((S.hist||[]).length){ ir(S.hist.pop(), true); return true; }
+  if (DENTRO_MAIS.includes(S.tab) && (ehAdm() || DEMO)){ ir('mais', true); return true; }
+  return false;
+}
+function ativarVoltarDoCelular(){
+  if (window._voltarOn) return; window._voltarOn = true;
+  history.pushState({masto:1}, '');
+  window.addEventListener('popstate', () => { if (voltar()) history.pushState({masto:1}, ''); });
 }
 function fab(fn){ $('#fabRoot').innerHTML = `<button class="fab" aria-label="Adicionar" onclick="${fn}">${IC.plus}</button>`; }
 function render(){ (VIEWS()[S.tab] || vInicio)(); }
@@ -1151,7 +1172,7 @@ function vEscola(){
   const n = s => S.alunos.filter(a=>a.status===s).length;
   const semImg = S.alunos.filter(a=>a.status==='ativo' && a.imagem_autorizada!==true).length;
   $('#view').innerHTML = `
-    <button class="btn ghost sm" onclick="ir('mais')">‹ Voltar</button>
+    <button class="btn ghost sm" onclick="voltar()">‹ Voltar</button>
     <div class="sec-h"><h2>Escola de Música</h2><span class="badge b-acc">${n('ativo')} aluno${n('ativo')!==1?'s':''}</span></div>
     <div class="card"><b>Link de matrícula para os pais</b>
       <p class="muted" style="margin:4px 0 0">Os pais preenchem a ficha e respondem o termo de uso de imagem pelo celular. A matrícula chega aqui como pendente para a diretoria aprovar.</p>
@@ -1292,7 +1313,7 @@ function vVotantes(){
     quites.map((a,i)=>`${i+1}. ${a.nome}`).join('\n') +
     `\n\nQuem não está na relação por débito com a Tesouraria pode regularizar a situação até 24 horas antes da Assembleia (Art. 32, parágrafo único).`;
   $('#view').innerHTML = `
-    <button class="btn ghost sm" onclick="ir('mais')">‹ Voltar</button>
+    <button class="btn ghost sm" onclick="voltar()">‹ Voltar</button>
     <div class="sec-h"><h2>Sócios com direito a voto</h2><span class="badge b-emdia">${quites.length}</span></div>
     <div class="card"><p class="muted" style="margin:0">O Art. 32 manda publicar esta relação nos 5 dias antes da Assembleia. Ela traz <b>só os nomes de quem está quite</b> (${quites.length}), sem CPF e sem citar quem deve. ${fora} sócio${fora!==1?'s':''} com mensalidade em aberto fica${fora!==1?'m':''} de fora e pode${fora!==1?'m':''} regularizar até 24 h antes.</p>
       <p class="muted" style="margin:8px 0 0">O estatuto também exige ser maior de 18 anos para votar (Art. 29). Confira isso na hora da assinatura da lista de presença.</p>
@@ -1319,7 +1340,7 @@ function vEstatuto(){
   const docs = S.documentos.filter(d=>d.tipo==='estatuto').sort((a,b)=>b.criado_em.localeCompare(a.criado_em));
   const atual = docs[0];
   $('#view').innerHTML = `
-    ${ehAdm()||DEMO ? `<button class="btn ghost sm" onclick="ir('mais')">‹ Voltar</button>` : ''}
+    ${ehAdm()||DEMO ? `<button class="btn ghost sm" onclick="voltar()">‹ Voltar</button>` : ''}
     <div class="sec-h"><h2>Estatuto da associação</h2></div>
     ${atual ? `<div class="card"><div class="row"><div class="avatar" style="color:var(--accent)">${IC.doc}</div><div class="grow"><b>${esc(atual.titulo||'Estatuto')}</b><div class="muted">Enviado em ${fdata(atual.criado_em)}</div></div></div>
       <button class="btn acc wide" style="margin-top:12px" onclick="abrirDoc(${atual.id})">Abrir estatuto</button></div>`
@@ -1375,7 +1396,7 @@ async function vIndicacoes(){
   const badgeInd = i => { if (i.status !== 'pendente') return `<span class="badge ${BAD[i.status]}">${i.status}</span>`;
     const p = placar(i.id); return `<span class="badge ${faltaMeuVoto(i)?'b-pend':'b-vence'}">${faltaMeuVoto(i)?'vote':'👍 '+p.sim+' · 👎 '+p.nao}</span>`; };
   $('#view').innerHTML = `
-    <button class="btn ghost sm" onclick="ir('mais')">‹ Voltar</button>
+    <button class="btn ghost sm" onclick="voltar()">‹ Voltar</button>
     <div class="sec-h"><h2>Indicações</h2><span class="muted">${lst.filter(i=>i.status==='pendente').length} pendentes</span></div>
     ${falta ? `<div class="card" style="background:var(--warn-soft);border:0;margin-bottom:10px"><b>${falta} indicaç${falta>1?'ões aguardam':'ão aguarda'} o seu voto</b><div class="muted">Toque na indicação para votar. Aprova com ${votosNec()} votos “Sim” de ${diretoria().length} da diretoria.</div></div>` : ''}
     ${lst.length ? `<div class="list">${lst.map(i=>`<div class="li" onclick="abrirIndicacao(${i.id})">
