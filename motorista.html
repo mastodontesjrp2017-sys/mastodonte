@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Fila do motorista · Mastodonte</title>
+<meta name="theme-color" content="#141414">
+<meta name="robots" content="noindex">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{
+  --bg:#f3efe6; --card:#fffdf8; --ink:#161513; --ink2:#4f4a43; --ink3:#6e685d; --line:#e3ddd0;
+  --brand:#141414; --brand-ink:#f0eadc; --accent:#b8742a; --accent-soft:#f3e4cf;
+  --ok:#2f7a4c; --ok-soft:#e1f0e5; --warn:#9a6f00; --warn-soft:#f8edc8; --bad:#b8352a;
+  --r:14px; --slab:"Zilla Slab",Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#121110; --card:#1c1b19; --ink:#efeae0; --ink2:#c9c2b4; --ink3:#a39c8f; --line:#2e2c28;
+  --brand:#0a0a0a; --accent:#d8964b; --accent-soft:#3a2b1a; --ok:#5cbf83; --ok-soft:#173222; --warn:#e2b53c; --warn-soft:#3a3013; --bad:#ec6f62;
+  color-scheme:dark;
+}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 var(--sans)}
+header{position:sticky;top:0;z-index:5;background:var(--brand);color:var(--brand-ink);padding:calc(12px + env(safe-area-inset-top)) 16px 12px}
+.w{max-width:620px;margin:0 auto}
+h1{font-family:var(--slab);font-size:22px;margin:0}
+header small{opacity:.75;font-size:13px}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
+.tabs button{border:0;border-radius:10px;padding:10px;font:inherit;font-weight:700;background:rgba(255,255,255,.1);color:var(--brand-ink);cursor:pointer}
+.tabs button.on{background:var(--brand-ink);color:var(--brand)}
+main{padding:14px 14px calc(30px + env(safe-area-inset-bottom))}
+.trip{background:var(--card);border:1px solid var(--line);border-radius:var(--r);margin-bottom:14px;overflow:hidden}
+.trip.go{border-color:var(--ok)}
+.th{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.th b{font-family:var(--slab);font-size:19px;flex:1}
+.cap{font-weight:700;font-size:14px;padding:3px 10px;border-radius:999px;background:var(--accent-soft)}
+.near{font-size:13px;color:var(--ok);font-weight:700}
+.p{padding:12px 14px;border-top:1px solid var(--line)}
+.p:first-of-type{border-top:0}
+.p .n{font-weight:700}
+.p .a{color:var(--ink2);font-size:15px}
+.p .o{color:var(--warn);font-size:14px;margin-top:2px}
+.acts{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:11px;padding:9px 12px;font:inherit;font-size:14px;font-weight:700;cursor:pointer;background:var(--accent-soft);color:var(--ink);text-decoration:none;min-height:40px}
+.btn.big{min-height:48px;font-size:16px;flex:1}
+.btn.go{background:var(--accent);color:#fff}
+.btn.ok{background:var(--ok);color:#fff}
+.btn.back{background:transparent;color:var(--ink3);border:1px solid var(--line)}
+.tf{display:flex;gap:8px;padding:12px 14px;background:var(--bg);border-top:1px solid var(--line);flex-wrap:wrap}
+.empty{text-align:center;color:var(--ink3);padding:40px 10px}
+.sec{font-family:var(--slab);font-size:17px;margin:18px 2px 10px;color:var(--ink2)}
+.upd{font-size:12px;opacity:.7}
+a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<header><div class="w">
+  <div style="display:flex;align-items:baseline;gap:10px"><h1 class="grow" id="tNome" style="flex:1">Carregando…</h1><span class="upd" id="upd"></span></div>
+  <small id="tInfo"></small>
+  <div class="tabs"><button id="tIda" class="on" onclick="aba('ida')">Ida</button><button id="tVolta" onclick="aba('volta')">Volta</button></div>
+</div></header>
+<main class="w" id="m"></main>
+<script>
+const CFG = { url: 'https://cknzysljezvpazonvibb.supabase.co', key: 'sb_publishable_ji48PdmWNR5nvQkXMhbbCQ_DEekbpVL' };
+const sb = supabase.createClient(CFG.url, CFG.key);
+const $ = s => document.querySelector(s);
+const tok = new URLSearchParams(location.search).get('m');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const dig = s => String(s||'').replace(/\D/g,'');
+const norm = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\b(jardim|jd|vila|vl|parque|pq|conjunto|conj|habitacional|hab|residencial|res)\b\.?/g,'').replace(/[^a-z0-9]/g,'');
+const CAP = 4, PERTO_KM = 2;
+let D = null, ABA = 'ida';
+
+// distância em km entre dois pontos (quando o afiliado marcou a localização)
+function km(a, b){
+  const R = 6371, r = x => x*Math.PI/180;
+  const dLa = r(b.lat-a.lat), dLo = r(b.lng-a.lng);
+  const h = Math.sin(dLa/2)**2 + Math.cos(r(a.lat))*Math.cos(r(b.lat))*Math.sin(dLo/2)**2;
+  return 2*R*Math.asin(Math.sqrt(h));
+}
+// perto = até 2 km (com localização) ou mesmo bairro
+function perto(a, b){
+  if (a.lat != null && b.lat != null) return km(a,b) <= PERTO_KM;
+  return a.bairro && b.bairro && norm(a.bairro) === norm(b.bairro);
+}
+function dist(a, b){ return (a.lat != null && b.lat != null) ? km(a,b) : 1; }
+
+// monta viagens: começa pelo 1º da fila e junta quem mora perto, até 4 pessoas
+function montarViagens(fila){
+  const rest = fila.slice(), viagens = [];
+  while (rest.length){
+    const base = rest.shift(), v = [base]; let ocup = base.pessoas;
+    const cand = rest.filter(p => perto(base, p)).sort((x,y) => dist(base,x) - dist(base,y));
+    for (const c of cand){
+      if (ocup + c.pessoas > CAP) continue;
+      v.push(c); ocup += c.pessoas; rest.splice(rest.indexOf(c), 1);
+    }
+    viagens.push(v);
+  }
+  return viagens;
+}
+const ponto = p => p.lat != null ? `${p.lat},${p.lng}` : `${p.endereco}${p.bairro ? ', ' + p.bairro : ''}`;
+function rota(v){
+  const festa = D.local || '';
+  const pts = v.map(ponto);
+  const u = new URL('https://www.google.com/maps/dir/');
+  u.searchParams.set('api','1'); u.searchParams.set('travelmode','driving');
+  if (ABA === 'ida'){ u.searchParams.set('destination', festa); if (pts.length) u.searchParams.set('waypoints', pts.join('|')); }
+  else { u.searchParams.set('origin', festa); u.searchParams.set('destination', pts[pts.length-1]); if (pts.length > 1) u.searchParams.set('waypoints', pts.slice(0,-1).join('|')); }
+  return u.toString();
+}
+const wa = (t, nome) => { const d = dig(t); if (!d) return ''; const n = d.length <= 11 ? '55' + d : d;
+  const txt = ABA === 'ida' ? `Olá, ${nome.split(' ')[0]}! Sou o motorista da festa da Mastodonte e estou indo te buscar.` : `Olá, ${nome.split(' ')[0]}! Sou o motorista da festa da Mastodonte. Já posso te levar para casa.`;
+  return `https://wa.me/${n}?text=${encodeURIComponent(txt)}`; };
+
+function pessoa(p){
+  return `<div class="p">
+    <div class="n">${esc(p.nome)} · ${p.pessoas} pessoa${p.pessoas>1?'s':''}</div>
+    <div class="a">${esc(p.endereco)}${p.bairro ? ', ' + esc(p.bairro) : ''}</div>
+    ${p.obs ? `<div class="o">⚠ ${esc(p.obs)}</div>` : ''}
+    <div class="acts">
+      ${p.telefone ? `<a class="btn" href="tel:${dig(p.telefone)}">📞 Ligar</a><a class="btn" href="${wa(p.telefone, p.nome)}" target="_blank" rel="noopener">💬 WhatsApp</a>` : '<span style="color:var(--ink3);font-size:14px">Sem telefone</span>'}
+    </div>
+  </div>`;
+}
+function cartao(v, i, andamento){
+  const ocup = v.reduce((s,p)=>s+p.pessoas,0);
+  const juntos = v.length > 1 ? `<div class="near">Moram perto: ${v.length} pedidos juntos</div>` : '';
+  const ids = JSON.stringify(v.map(p=>p.id));
+  return `<div class="trip ${andamento?'go':''}">
+    <div class="th"><b>${andamento ? 'Em andamento' : 'Viagem ' + i}</b><span class="cap">${ocup}/${CAP} lugares</span></div>
+    ${juntos ? `<div style="padding:8px 14px 0">${juntos}</div>` : ''}
+    ${v.map(pessoa).join('')}
+    <div class="tf">
+      <a class="btn big" href="${esc(rota(v))}" target="_blank" rel="noopener">🗺 Abrir rota</a>
+      ${andamento
+        ? `<button class="btn big ok" onclick='mudar(${ids},"concluido")'>✓ Concluir</button><button class="btn back" onclick='mudar(${ids},"fila")'>Devolver à fila</button>`
+        : `<button class="btn big go" onclick='mudar(${ids},"a_caminho")'>Iniciar viagem</button>`}
+    </div>
+  </div>`;
+}
+function desenhar(){
+  if (!D) return;
+  const P = D.pedidos.filter(p => p.sentido === ABA);
+  const fila = P.filter(p => p.status === 'fila');
+  const and = P.filter(p => p.status === 'a_caminho');
+  const feitos = P.filter(p => p.status === 'concluido');
+  const nI = D.pedidos.filter(p=>p.sentido==='ida' && p.status==='fila').length, nV = D.pedidos.filter(p=>p.sentido==='volta' && p.status==='fila').length;
+  $('#tIda').textContent = `Ida (${nI})`; $('#tVolta').textContent = `Volta (${nV})`;
+  let h = '';
+  if (and.length) h += cartao(and, 0, true);
+  const V = montarViagens(fila);
+  if (V.length) h += `<div class="sec">Próximas viagens</div>` + V.map((v,i) => cartao(v, i+1, false)).join('');
+  if (!and.length && !V.length) h += `<div class="empty">Ninguém na fila ${ABA === 'ida' ? 'de ida' : 'de volta'} agora.<br>A lista atualiza sozinha.</div>`;
+  if (feitos.length) h += `<div class="sec">Concluídas (${feitos.length})</div><div class="trip">${feitos.map(p=>`<div class="p"><div class="n">${esc(p.nome)} · ${p.pessoas}</div><div class="a">${esc(p.bairro||p.endereco)}</div></div>`).join('')}</div>`;
+  $('#m').innerHTML = h;
+}
+function aba(s){ ABA = s; $('#tIda').classList.toggle('on', s==='ida'); $('#tVolta').classList.toggle('on', s==='volta'); desenhar(); }
+async function carregar(){
+  if (!tok){ $('#tNome').textContent = 'Link incompleto'; return; }
+  const { data, error } = await sb.rpc('motorista_fila', { p_mtoken: tok });
+  if (error || !data){ $('#tNome').textContent = 'Link inválido'; return; }
+  D = data;
+  $('#tNome').textContent = data.nome;
+  $('#tInfo').textContent = `${data.motorista ? data.motorista + ' · ' : ''}das ${data.inicio || '10:00'} às ${data.fim || '21:00'}`;
+  $('#upd').textContent = 'atualizado ' + new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  desenhar();
+}
+async function mudar(ids, st){
+  if (st === 'concluido' && !confirm('Marcar esta viagem como concluída?')) return;
+  const { error } = await sb.rpc('motorista_status', { p_mtoken: tok, p_ids: ids, p_status: st });
+  if (error) return alert('Não foi possível salvar. Verifique a internet e tente de novo.');
+  carregar();
+}
+carregar();
+setInterval(() => { if (!document.hidden) carregar(); }, 20000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) carregar(); });
+</script>
+</body>
+</html>

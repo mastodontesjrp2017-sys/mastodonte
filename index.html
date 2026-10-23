@@ -197,7 +197,7 @@ nav.tabs button.on{color:var(--accent)}
    Vazio = MODO DEMONSTRAÇÃO (dados ficam só no aparelho).
    ===================================================================== */
 const CFG = { url: 'https://cknzysljezvpazonvibb.supabase.co', key: 'sb_publishable_ji48PdmWNR5nvQkXMhbbCQ_DEekbpVL' };
-const VERSAO = 'v19';
+const VERSAO = 'v20';
 const DEMO = !CFG.url || !CFG.key;
 const sb = DEMO ? null : supabase.createClient(CFG.url, CFG.key);
 
@@ -2047,7 +2047,67 @@ function cardDivulgacao(e){
     ${e.arte ? `<img src="${esc(arteUrl(e.arte))}" alt="Arte do evento" style="width:100%;max-height:220px;object-fit:cover;border-radius:12px;margin-top:10px">` : `<p class="muted" style="margin:6px 0 0">Dica: em "Editar evento" dá para colocar a arte (imagem) de divulgação.</p>`}
     <div class="g2" style="margin-top:10px"><button class="btn acc" onclick="divulgarWhats(${e.id})">${IC.wa} WhatsApp</button><button class="btn ghost" onclick="copiarLinkEvento(${e.id})">Copiar link</button></div>
     ${e.aceita_confirmacao!==false ? botaoMinhaPresenca(e) : ''}
-    ${e.aceita_confirmacao!==false ? `<button class="btn ghost wide" style="margin-top:8px" onclick="listaConfirmados(${e.id})">✅ ${pess} pessoa${pess!==1?'s':''} confirmada${pess!==1?'s':''} (${conf.length} resposta${conf.length!==1?'s':''}) ›</button>` : ''}</div>`;
+    ${e.aceita_confirmacao!==false ? `<button class="btn ghost wide" style="margin-top:8px" onclick="listaConfirmados(${e.id})">✅ ${pess} pessoa${pess!==1?'s':''} confirmada${pess!==1?'s':''} (${conf.length} resposta${conf.length!==1?'s':''}) ›</button>` : ''}
+    ${blocoTransporte(e)}</div>`;
+}
+/* ---------- transporte do evento (motorista + fila) ---------- */
+const linkTransporte = e => pastaApp() + 'transporte.html?e=' + e.token_publico;
+const linkMotorista = e => pastaApp() + 'motorista.html?m=' + e.motorista_token;
+function blocoTransporte(e){
+  if (!e.token_publico) return '';
+  return `<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
+    <div class="row"><b class="grow">🚗 Transporte</b><span class="badge ${e.transporte_ativo?'b-emdia':'b-mute'}">${e.transporte_ativo?'fila aberta':'fechado'}</span></div>
+    <div class="muted" style="margin-top:2px">${e.motorista_nome ? esc(e.motorista_nome) + ' · ' : ''}das ${esc(e.transporte_inicio||'10:00')} às ${esc(e.transporte_fim||'21:00')}</div>
+    <div class="g2" style="margin-top:10px"><button class="btn ghost" onclick="formTransporte(${e.id})">Configurar</button><button class="btn ghost" onclick="verFilaTransporte(${e.id})">Ver fila ›</button></div>
+    ${e.transporte_ativo ? `<div class="g2" style="margin-top:8px"><button class="btn acc" onclick="enviarLinkTransporte(${e.id})">${IC.wa} Link p/ afiliados</button><button class="btn" onclick="enviarLinkMotorista(${e.id})">Link do motorista</button></div>` : ''}
+  </div>`;
+}
+function formTransporte(id){
+  const e = S.eventos.find(x=>x.id===id); if (!e) return;
+  abrirSheet(`<h3>Transporte do evento</h3>
+    <form class="f" id="fTr">
+      <label class="row" style="gap:10px;font-weight:700"><input type="checkbox" name="ativo" ${e.transporte_ativo?'checked':''} style="width:22px;height:22px"> Fila de transporte aberta para os afiliados</label>
+      <div class="g2"><div><label>Início</label><input name="ini" type="time" value="${esc(e.transporte_inicio||'10:00')}"></div><div><label>Fim</label><input name="fim" type="time" value="${esc(e.transporte_fim||'21:00')}"></div></div>
+      <label>Nome do motorista</label><input name="nome" value="${esc(e.motorista_nome||'')}" placeholder="Ex.: João">
+      <label>Telefone / WhatsApp do motorista</label><input name="tel" inputmode="tel" value="${esc(e.motorista_telefone||'')}">
+      <label>Link da localização em tempo real</label><input name="loc" value="${esc(e.motorista_localizacao||'')}" placeholder="https://maps.app.goo.gl/...">
+      <p class="muted" style="margin:6px 0 0">No dia, o motorista abre o Google Maps → foto do perfil → <b>Compartilhamento de local</b> → escolhe "até desativar" → <b>Copiar link</b>, e manda o link para você colar aqui. Os afiliados veem no link do transporte.</p>
+      <div class="err" id="errTr"></div>
+      <button class="btn acc wide" style="margin-top:12px">Salvar transporte</button>
+    </form>`);
+  $('#fTr').onsubmit = async ev => { ev.preventDefault(); const f = new FormData(ev.target);
+    const loc = (f.get('loc')||'').trim();
+    if (loc && !/^https?:\/\//i.test(loc)) return $('#errTr').textContent = 'O link da localização precisa começar com https://';
+    try { await DB.upd('eventos', {id}, { transporte_ativo: !!f.get('ativo'), transporte_inicio: f.get('ini')||'10:00', transporte_fim: f.get('fim')||'21:00',
+        motorista_nome: (f.get('nome')||'').trim()||null, motorista_telefone: (f.get('tel')||'').trim()||null, motorista_localizacao: loc||null });
+      await carregar('eventos'); fecharSheet(); toast('Transporte salvo'); render(); abrirEvento(id);
+    } catch(err){ $('#errTr').textContent = erroMsg(err); } };
+}
+async function enviarLinkTransporte(id){
+  const e = S.eventos.find(x=>x.id===id); if (!e) return;
+  const t = `🚗 *Transporte para ${e.nome}*\nO motorista leva e traz os associados das ${e.transporte_inicio||'10:00'} às ${e.transporte_fim||'21:00'}, no dia do evento.\nEntre na fila pelo link (até 4 pessoas por pedido), usando o CPF de quem confirmou presença:\n${linkTransporte(e)}`;
+  if (navigator.share){ try { await navigator.share({ text: t }); return; } catch(err){ if (err.name === 'AbortError') return; } }
+  try { await navigator.clipboard.writeText(t); toast('Mensagem com link copiada'); } catch(err){ prompt('Copie o link:', linkTransporte(e)); }
+}
+async function enviarLinkMotorista(id){
+  const e = S.eventos.find(x=>x.id===id); if (!e) return;
+  if (!(await confirmar('Link do motorista', 'Esse link mostra endereços e telefones de quem pediu transporte. Envie só para o motorista.', 'Enviar'))) return;
+  const t = `Olá${e.motorista_nome ? ', ' + e.motorista_nome.split(' ')[0] : ''}! Esta é a sua fila de corridas para ${e.nome}. Deixe aberta no dia — ela atualiza sozinha e junta quem mora perto (até 4 pessoas):\n${linkMotorista(e)}`;
+  const tel = (e.motorista_telefone||'').replace(/\D/g,'');
+  if (tel){ window.open(`https://wa.me/${tel.length<=11?'55'+tel:tel}?text=${encodeURIComponent(t)}`, '_blank'); return; }
+  try { await navigator.clipboard.writeText(t); toast('Link do motorista copiado'); } catch(err){ prompt('Copie o link:', linkMotorista(e)); }
+}
+async function verFilaTransporte(id){
+  const e = S.eventos.find(x=>x.id===id); if (!e) return;
+  let L = [];
+  try { if (!DEMO){ const { data, error } = await sb.from('transporte_pedidos').select('*').eq('evento_id', id).neq('status','cancelado').order('criado_em'); if (error) throw error; L = data || []; } }
+  catch(err){ return toast(erroMsg(err)); }
+  const ST = { fila:['b-vence','na fila'], a_caminho:['b-emdia','a caminho'], concluido:['b-mute','concluído'] };
+  const grupo = s => { const g = L.filter(p=>p.sentido===s); const pes = g.filter(p=>p.status!=='concluido').reduce((a,p)=>a+p.pessoas,0);
+    return `<div class="sec-h"><h2 style="font-size:17px">${s==='ida'?'Ida para a festa':'Volta para casa'}</h2><span class="muted">${g.filter(p=>p.status==='fila').length} na fila · ${pes} pessoas</span></div>
+    ${g.length ? `<div class="list">${g.map(p=>`<div class="li" style="cursor:default"><div class="grow"><div class="t">${esc(p.nome)} · ${p.pessoas}</div><div class="s">${esc(p.endereco)}${p.bairro?', '+esc(p.bairro):''}</div></div><span class="badge ${ST[p.status][0]}">${ST[p.status][1]}</span></div>`).join('')}</div>` : '<p class="muted">Ninguém ainda.</p>'}`; };
+  abrirSheet(`<h3>Fila do transporte</h3>${grupo('ida')}${grupo('volta')}
+    <button class="btn ghost wide" style="margin-top:14px" onclick="window.open(linkMotorista(S.eventos.find(x=>x.id===${id})),'_blank')">Abrir a tela do motorista ›</button>`);
 }
 async function ativarDivulgacao(id){
   try { await DB.upd('eventos',{id},{divulgar:true}); await carregar('eventos'); toast('Página de divulgação ativa'); abrirEvento(id); } catch(e){ toast(erroMsg(e)); } }

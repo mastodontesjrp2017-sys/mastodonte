@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Transporte do evento · Mastodonte</title>
+<meta name="theme-color" content="#141414">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{
+  --bg:#f3efe6; --card:#fffdf8; --ink:#161513; --ink2:#4f4a43; --ink3:#6e685d; --line:#e3ddd0;
+  --brand:#141414; --brand-ink:#f0eadc; --accent:#b8742a; --accent-soft:#f3e4cf;
+  --ok:#2f7a4c; --ok-soft:#e1f0e5; --warn:#9a6f00; --warn-soft:#f8edc8; --bad:#b8352a; --bad-soft:#f8dfdb;
+  --r:14px; --slab:"Zilla Slab",Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#121110; --card:#1c1b19; --ink:#efeae0; --ink2:#c9c2b4; --ink3:#a39c8f; --line:#2e2c28;
+  --brand:#0a0a0a; --accent:#d8964b; --accent-soft:#3a2b1a;
+  --ok:#5cbf83; --ok-soft:#173222; --warn:#e2b53c; --warn-soft:#3a3013; --bad:#ec6f62; --bad-soft:#3d1b17;
+  color-scheme:dark;
+}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--sans)}
+header{background:var(--brand);color:var(--brand-ink);padding:calc(18px + env(safe-area-inset-top)) 20px 22px}
+header .w,main{max-width:560px;margin:0 auto}
+header small{opacity:.75;font-size:14px}
+h1{font-family:var(--slab);font-size:28px;line-height:1.15;margin:4px 0 6px}
+h2{font-family:var(--slab);font-size:20px;margin:0 0 10px}
+main{padding:16px 16px calc(40px + env(safe-area-inset-bottom))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:14px}
+.muted{color:var(--ink3);font-size:14px}
+label{display:block;font-weight:700;font-size:14px;margin:14px 0 6px;color:var(--ink2)}
+input,textarea,select{width:100%;font:inherit;font-size:16px;padding:12px 13px;border:1px solid var(--line);border-radius:11px;background:var(--bg);color:var(--ink)}
+textarea{min-height:64px;resize:vertical}
+input:focus,textarea:focus,button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.seg.p4{grid-template-columns:repeat(4,1fr)}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg span{display:block;text-align:center;padding:12px 6px;border:1px solid var(--line);border-radius:11px;font-weight:700;cursor:pointer;background:var(--bg)}
+.seg input:checked+span{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:12px;padding:13px 16px;font:inherit;font-weight:700;cursor:pointer;background:var(--brand);color:var(--brand-ink);text-decoration:none;min-height:48px}
+.btn.acc{background:var(--accent);color:#fff}
+.btn.ghost{background:var(--accent-soft);color:var(--ink)}
+.btn.sm{min-height:38px;padding:8px 12px;font-size:14px}
+.wide{width:100%}
+.row{display:flex;gap:10px;align-items:center}
+.grow{flex:1;min-width:0}
+.err{color:var(--bad);font-weight:700;font-size:14px;min-height:1em;margin-top:10px}
+.driver{display:flex;gap:14px;align-items:center}
+.driver .ic{width:52px;height:52px;border-radius:50%;background:var(--accent-soft);display:grid;place-items:center;font-size:26px;flex:none}
+.pos{font-family:var(--slab);font-size:44px;line-height:1;color:var(--accent)}
+.ped{border-top:1px solid var(--line);padding:14px 0}
+.ped:first-of-type{border-top:0;padding-top:4px}
+.tag{display:inline-block;border-radius:999px;padding:3px 10px;font-size:13px;font-weight:700}
+.t-fila{background:var(--warn-soft);color:var(--warn)}.t-a_caminho{background:var(--ok-soft);color:var(--ok)}.t-concluido{background:var(--line);color:var(--ink2)}
+.hide{display:none!important}
+.loc{font-size:14px;margin-top:6px}
+</style>
+</head>
+<body>
+<header><div class="w">
+  <small>Transporte do evento</small>
+  <h1 id="tNome">Carregando…</h1>
+  <div id="tInfo" class="muted" style="color:var(--brand-ink);opacity:.8"></div>
+</div></header>
+<main>
+  <div id="fechado" class="card hide"></div>
+
+  <section id="motor" class="card hide">
+    <div class="driver">
+      <div class="ic" aria-hidden="true">🚗</div>
+      <div class="grow">
+        <b id="mNome"></b>
+        <div class="muted" id="mHor"></div>
+      </div>
+    </div>
+    <div class="row" style="margin-top:14px;flex-wrap:wrap">
+      <a class="btn acc grow hide" id="mLoc" target="_blank" rel="noopener">📍 Ver onde o motorista está</a>
+      <a class="btn ghost hide" id="mTel">📞 Ligar</a>
+    </div>
+    <p class="muted" style="margin:12px 0 0" id="mFila"></p>
+  </section>
+
+  <section id="meus" class="card hide"><h2>Seus pedidos</h2><div id="lista"></div></section>
+
+  <form id="f" class="card hide" novalidate>
+    <h2 id="fTit">Entrar na fila</h2>
+    <p class="muted" style="margin:0">Use o CPF do associado que confirmou presença. Cada pedido leva até 4 pessoas.</p>
+
+    <label for="cpf">CPF do associado</label>
+    <input id="cpf" name="cpf" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00" required>
+
+    <label>Para onde?</label>
+    <div class="seg">
+      <label style="margin:0"><input type="radio" name="sentido" value="ida" checked><span>Ida para a festa</span></label>
+      <label style="margin:0"><input type="radio" name="sentido" value="volta"><span>Volta para casa</span></label>
+    </div>
+
+    <label>Quantas pessoas?</label>
+    <div class="seg p4">
+      <label style="margin:0"><input type="radio" name="pessoas" value="1" checked><span>1</span></label>
+      <label style="margin:0"><input type="radio" name="pessoas" value="2"><span>2</span></label>
+      <label style="margin:0"><input type="radio" name="pessoas" value="3"><span>3</span></label>
+      <label style="margin:0"><input type="radio" name="pessoas" value="4"><span>4</span></label>
+    </div>
+
+    <label for="end" id="lEnd">Endereço para buscar</label>
+    <input id="end" name="end" autocomplete="street-address" placeholder="Rua, número" required>
+    <label for="bairro">Bairro</label>
+    <input id="bairro" name="bairro" placeholder="Ex.: Centro" required>
+    <button type="button" class="btn ghost sm" id="gps" style="margin-top:10px">📍 Usar minha localização atual</button>
+    <div class="loc muted" id="gpsTxt">Ajuda o motorista a juntar pessoas que moram perto.</div>
+
+    <label for="tel">WhatsApp para o motorista avisar</label>
+    <input id="tel" name="tel" inputmode="tel" placeholder="(19) 99999-9999">
+
+    <label for="obs">Observação (opcional)</label>
+    <textarea id="obs" name="obs" placeholder="Ex.: portão azul, levar cadeira de rodas"></textarea>
+
+    <div class="err" id="err" role="alert"></div>
+    <button class="btn acc wide" id="btEnviar" style="margin-top:6px">Entrar na fila</button>
+  </form>
+
+  <div class="card" id="consultar">
+    <h2>Já pediu?</h2>
+    <div class="row">
+      <input id="cpf2" inputmode="numeric" placeholder="Seu CPF" class="grow" aria-label="Seu CPF">
+      <button class="btn" id="btVer" type="button">Ver</button>
+    </div>
+    <div class="err" id="err2" role="alert"></div>
+  </div>
+</main>
+<script>
+const CFG = { url: 'https://cknzysljezvpazonvibb.supabase.co', key: 'sb_publishable_ji48PdmWNR5nvQkXMhbbCQ_DEekbpVL' };
+const sb = supabase.createClient(CFG.url, CFG.key);
+const $ = s => document.querySelector(s);
+const tok = new URLSearchParams(location.search).get('e');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const dig = s => String(s||'').replace(/\D/g,'');
+const fdata = d => d ? new Date(d+'T12:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'}) : '';
+const msg = e => (e?.message||'Algo deu errado. Tente de novo.').replace(/^.*?ERROR:\s*/,'');
+let INFO = null, LAT = null, LNG = null;
+const maskCpf = el => el.addEventListener('input', () => { const d = dig(el.value).slice(0,11);
+  el.value = d.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2'); });
+maskCpf($('#cpf')); maskCpf($('#cpf2'));
+try { const c = localStorage.getItem('masto_cpf'); if (c){ $('#cpf').value = c; $('#cpf2').value = c; } } catch(e){}
+
+async function carregar(){
+  if (!tok){ $('#tNome').textContent = 'Link incompleto'; return; }
+  const { data, error } = await sb.rpc('transporte_info', { p_token: tok });
+  if (error || !data){ $('#tNome').textContent = 'Link inválido'; return; }
+  INFO = data;
+  $('#tNome').textContent = data.nome;
+  $('#tInfo').textContent = `${fdata(data.data)}${data.local ? ' · ' + data.local : ''}`;
+  if (!data.ativo){
+    $('#fechado').classList.remove('hide');
+    $('#fechado').innerHTML = '<h2>Transporte ainda não aberto</h2><p class="muted" style="margin:0">A diretoria vai liberar a fila em breve. Volte por este mesmo link.</p>';
+    $('#consultar').classList.add('hide'); return;
+  }
+  $('#motor').classList.remove('hide'); $('#f').classList.remove('hide');
+  $('#mNome').textContent = data.motorista ? `Motorista: ${data.motorista}` : 'Motorista do evento';
+  $('#mHor').textContent = `Atende das ${data.inicio || '10:00'} às ${data.fim || '21:00'} no dia do evento`;
+  if (data.localizacao){ $('#mLoc').href = data.localizacao; $('#mLoc').classList.remove('hide'); }
+  if (data.motorista_tel){ $('#mTel').href = 'tel:' + dig(data.motorista_tel); $('#mTel').classList.remove('hide'); }
+  $('#mFila').textContent = `Na fila agora: ${data.fila_ida} para ida e ${data.fila_volta} para volta.`;
+  if ($('#cpf2').value) verMeus(true);
+}
+
+$('#gps').onclick = () => {
+  if (!navigator.geolocation){ $('#gpsTxt').textContent = 'Este celular não liberou a localização. O endereço digitado já basta.'; return; }
+  $('#gpsTxt').textContent = 'Buscando sua localização…';
+  navigator.geolocation.getCurrentPosition(p => { LAT = p.coords.latitude; LNG = p.coords.longitude;
+    $('#gpsTxt').innerHTML = '✓ Localização anotada. Confira se o endereço digitado é o mesmo lugar.'; },
+    () => { $('#gpsTxt').textContent = 'Não foi possível pegar a localização. O endereço digitado já basta.'; },
+    { enableHighAccuracy:true, timeout:15000 });
+};
+document.querySelectorAll('[name=sentido]').forEach(r => r.onchange = () => {
+  const v = r.value === 'volta';
+  $('#lEnd').textContent = v ? 'Endereço para deixar você' : 'Endereço para buscar';
+  $('#gps').classList.toggle('hide', v); $('#gpsTxt').classList.toggle('hide', v);
+});
+
+$('#f').onsubmit = async ev => {
+  ev.preventDefault(); const err = $('#err'); err.textContent = '';
+  const cpf = dig($('#cpf').value), sentido = document.querySelector('[name=sentido]:checked').value;
+  if (cpf.length !== 11) return err.textContent = 'Digite o CPF completo, com 11 números.';
+  if ($('#end').value.trim().length < 5) return err.textContent = 'Informe o endereço com rua e número.';
+  if (!$('#bairro').value.trim()) return err.textContent = 'Informe o bairro.';
+  const b = $('#btEnviar'); b.disabled = true; b.textContent = 'Enviando…';
+  const { data, error } = await sb.rpc('transporte_pedir', { p_token: tok, p_cpf: cpf, p_sentido: sentido,
+    p_endereco: $('#end').value, p_bairro: $('#bairro').value, p_pessoas: +document.querySelector('[name=pessoas]:checked').value,
+    p_telefone: $('#tel').value || null, p_obs: $('#obs').value || null,
+    p_lat: sentido === 'ida' ? LAT : null, p_lng: sentido === 'ida' ? LNG : null });
+  b.disabled = false; b.textContent = 'Entrar na fila';
+  if (error) return err.textContent = msg(error);
+  try { localStorage.setItem('masto_cpf', $('#cpf').value); } catch(e){}
+  $('#cpf2').value = $('#cpf').value;
+  await verMeus(true);
+  $('#meus').scrollIntoView({ behavior:'smooth' });
+};
+
+async function verMeus(silencioso){
+  const cpf = dig($('#cpf2').value); $('#err2').textContent = '';
+  if (cpf.length !== 11){ if (!silencioso) $('#err2').textContent = 'Digite o CPF completo.'; return; }
+  const { data, error } = await sb.rpc('transporte_meus', { p_token: tok, p_cpf: cpf });
+  if (error){ if (!silencioso) $('#err2').textContent = msg(error); return; }
+  const L = data || [];
+  if (!L.length){ $('#meus').classList.add('hide'); if (!silencioso) $('#err2').textContent = 'Nenhum pedido com esse CPF.'; return; }
+  $('#meus').classList.remove('hide');
+  const ST = { fila:'Na fila', a_caminho:'Motorista a caminho', concluido:'Concluído' };
+  $('#lista').innerHTML = L.map(p => `<div class="ped">
+    <div class="row"><b class="grow">${p.sentido === 'ida' ? 'Ida para a festa' : 'Volta para casa'}</b><span class="tag t-${p.status}">${ST[p.status]}</span></div>
+    ${p.status === 'fila' ? `<div class="row" style="margin-top:8px;align-items:baseline"><span class="pos">${p.posicao}º</span><span class="muted">lugar na fila ${p.sentido === 'ida' ? 'de ida' : 'de volta'}</span></div>` : ''}
+    ${p.status === 'a_caminho' && INFO?.localizacao ? `<a class="btn acc sm" style="margin-top:8px" href="${esc(INFO.localizacao)}" target="_blank" rel="noopener">📍 Acompanhar o motorista</a>` : ''}
+    <div class="muted" style="margin-top:6px">${esc(p.endereco)}${p.bairro ? ', ' + esc(p.bairro) : ''} · ${p.pessoas} pessoa${p.pessoas > 1 ? 's' : ''}</div>
+    ${p.status === 'fila' ? `<button class="btn ghost sm" style="margin-top:8px" onclick="cancelar(${p.id})">Sair da fila</button>` : ''}
+  </div>`).join('');
+}
+$('#btVer').onclick = () => verMeus(false);
+async function cancelar(id){
+  if (!confirm('Sair da fila? Para voltar, você entra de novo no fim da fila.')) return;
+  const { error } = await sb.rpc('transporte_cancelar', { p_token: tok, p_cpf: dig($('#cpf2').value), p_id: id });
+  if (error) return alert(msg(error));
+  verMeus(true); carregar();
+}
+carregar();
+setInterval(() => { if (!document.hidden && INFO?.ativo) { carregar(); } }, 60000);
+</script>
+</body>
+</html>
