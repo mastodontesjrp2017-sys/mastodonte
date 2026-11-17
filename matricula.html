@@ -47,6 +47,7 @@ button:disabled{opacity:.6}
 <main id="app"></main>
 <script>
 const CFG = { url: 'https://cknzysljezvpazonvibb.supabase.co', key: 'sb_publishable_ji48PdmWNR5nvQkXMhbbCQ_DEekbpVL' };
+const IDADE_MIN = 8, IDADE_MAX = 18;
 const TERMO_VERSAO = 'v1-2026-10';
 const TERMO = `TERMO DE AUTORIZAÇÃO DE USO DE IMAGEM E VOZ — A TÍTULO GRATUITO
 
@@ -96,7 +97,7 @@ Assinatura do responsável legal</div>
 function formulario(){
   $('#app').innerHTML = `
   <h1>Ficha de matrícula</h1>
-  <p class="muted">Escola de Música da Associação Mastodonte, para crianças e adolescentes de 8 a 16 anos. Preencha com os dados do aluno e do responsável. A diretoria confere e confirma a matrícula.</p>
+  <p class="muted">Escola de Música da Associação Mastodonte, para crianças e adolescentes de ${IDADE_MIN} a ${IDADE_MAX} anos. Preencha com os dados do aluno e do responsável. A diretoria confere e confirma a matrícula.</p>
   <form id="f" novalidate>
     <div class="card">
       <h2 style="margin-top:0">Aluno(a)</h2>
@@ -141,7 +142,7 @@ async function enviar(ev){
   if (dig(f.get('rtel')).length < 10) return err.textContent = 'Informe o telefone com DDD.';
   if (!f.get('img')) return err.textContent = 'Escolha se autoriza ou não o uso de imagem.';
   if (!f.get('decl')) return err.textContent = 'Marque a declaração de responsável legal.';
-  if ((id < 8 || id > 16) && !confirm(`O aluno tem ${id} anos. A escola atende de 8 a 16 anos. Enviar mesmo assim?`)) return;
+  if ((id < IDADE_MIN || id > IDADE_MAX) && !confirm(`O aluno tem ${id} anos. A escola atende de ${IDADE_MIN} a ${IDADE_MAX} anos. Enviar mesmo assim?`)) return;
   const btn = $('#btn'); btn.disabled = true; btn.textContent = 'Enviando…';
   try {
     if (!window.supabase) throw new Error('Sem conexão. Verifique a internet e tente de novo.');
