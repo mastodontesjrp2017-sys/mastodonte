@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Página do afiliado · Associação Mastodonte</title>
+<meta name="theme-color" content="#141414">
+<meta name="robots" content="noindex">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{--bg:#f3efe6;--card:#fffdf8;--ink:#161513;--ink2:#4f4a43;--ink3:#6e685d;--line:#e3ddd0;--brand:#141414;--brand-ink:#f0eadc;
+  --accent:#b8742a;--ok:#2f7a4c;--ok-soft:#e1f0e5;--bad:#b8352a;--bad-soft:#f8dfdb;--slab:"Zilla Slab",Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+@media (prefers-color-scheme:dark){:root{--bg:#121110;--card:#1c1b19;--ink:#efeae0;--ink2:#c9c2b4;--ink3:#a39c8f;--line:#2e2c28;
+  --brand:#0a0a0a;--accent:#d8964b;--ok:#5cbf83;--ok-soft:#173222;--bad:#ec6f62;--bad-soft:#3d1b17}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--sans)}
+header{background:var(--brand);color:var(--brand-ink);padding:calc(18px + env(safe-area-inset-top)) 20px 26px;text-align:center}
+header img{height:44px}
+header h1{font-family:var(--slab);font-size:26px;margin:8px 0 2px;letter-spacing:.3px}
+header p{margin:0;opacity:.75;font-size:15px}
+main{max-width:520px;margin:-14px auto 0;padding:0 16px calc(30px + env(safe-area-inset-bottom))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 1px 2px rgba(0,0,0,.05),0 6px 18px rgba(0,0,0,.06)}
+h2{font-family:var(--slab);font-size:22px;margin:0 0 4px}
+.muted{color:var(--ink3);font-size:15px;margin:0}
+label{display:block;font-size:14px;font-weight:700;color:var(--ink2);margin:16px 0 6px}
+input,select,textarea{width:100%;padding:13px 12px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink);font:inherit;font-size:16px}
+textarea{min-height:70px;resize:vertical}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
+.cpf{font-weight:700;color:var(--ink)}
+.check{display:flex;gap:12px;align-items:flex-start;margin-top:18px;font-size:15px;font-weight:600;color:var(--ink)}
+.check input{width:24px;height:24px;flex:none;margin:0;accent-color:var(--accent)}
+button{width:100%;margin-top:18px;border:0;border-radius:12px;padding:15px;font:inherit;font-weight:700;font-size:17px;background:var(--accent);color:#fff;cursor:pointer}
+button:disabled{opacity:.55}
+.err{color:var(--bad);font-size:15px;margin-top:10px;min-height:1em}
+.done{text-align:center;padding:28px 18px}
+.done .ic{width:64px;height:64px;border-radius:50%;background:var(--ok-soft);color:var(--ok);display:grid;place-items:center;margin:0 auto 12px;font-size:34px}
+.sec{font-family:var(--slab);font-size:20px;margin:22px 4px 8px}
+.st{display:flex;align-items:center;gap:12px}
+.st .dot{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;font-size:22px;flex:none}
+.ok .dot{background:var(--ok-soft);color:var(--ok)} .warn .dot{background:#f8edc8;color:#9a6f00} .bad .dot{background:var(--bad-soft);color:var(--bad)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:15px;margin-top:12px}
+.kv dt{color:var(--ink3)} .kv dd{margin:0;font-weight:700}
+.pg{display:flex;justify-content:space-between;padding:10px 0;border-top:1px solid var(--line);font-size:15px}
+.pg:first-child{border-top:0}
+.btn2{display:block;text-align:center;margin-top:12px;padding:13px;border-radius:12px;background:var(--bg);border:1px solid var(--line);color:var(--ink);font-weight:700;text-decoration:none}
+@media (prefers-color-scheme:dark){.warn .dot{background:#3a3013;color:#e2b53c}}
+.tabs{position:sticky;top:0;z-index:5;display:flex;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:4px;margin-bottom:14px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.tabs button{flex:1;width:auto;margin:0;padding:10px 4px;border-radius:10px;background:none;color:var(--ink2);font-size:14px;font-weight:700}
+.tabs button.on{background:var(--brand);color:var(--brand-ink)}
+.kp{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kp .card{padding:14px}.kp small{display:block;color:var(--ink3);font-size:13px;font-weight:700}.kp b{display:block;font-family:var(--slab);font-size:21px;margin-top:2px}
+.bar{margin-top:10px}.bar .l{display:flex;justify-content:space-between;font-size:14.5px;margin-bottom:4px;gap:8px}
+.bar .t{height:9px;background:var(--bg);border-radius:99px;overflow:hidden}.bar .f{height:100%;border-radius:99px;background:var(--bad)}
+.mes{display:grid;grid-template-columns:1fr auto auto;gap:4px 14px;font-size:14.5px}.mes span{text-align:right}
+.sd{padding:11px 0;border-top:1px solid var(--line)}.sd:first-child{border-top:0}
+.sd .r{display:flex;justify-content:space-between;gap:10px}.sd .d{font-size:13.5px;color:var(--ink3);margin-top:2px}
+.anos{display:flex;gap:6px;margin-bottom:10px}.anos button{width:auto;margin:0;padding:8px 14px;font-size:14px;border-radius:999px;background:var(--card);color:var(--ink2);border:1px solid var(--line)}
+.anos button.on{background:var(--ink);color:var(--bg)}
+.pos{color:var(--ok)}.neg{color:var(--bad)}
+.pix{display:flex;align-items:center;gap:10px;margin-top:10px;padding:12px;border-radius:12px;background:var(--card);border:1px dashed var(--accent)}
+.pix div{flex:1;min-width:0}.pix small{display:block;color:var(--ink3);font-size:12.5px;font-weight:700}.pix b{font-size:17px;letter-spacing:.3px}
+.pix .cp{width:auto;margin:0;padding:10px 14px;font-size:14px;border-radius:10px;flex:none}
+.meses{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:8px}
+.meses div{border-radius:10px;padding:8px 2px;text-align:center;font-weight:700;font-size:14px}
+.meses span{display:block;font-size:11.5px;font-weight:600}
+.m-pago{background:var(--ok-soft);color:var(--ok)} .m-aberto{background:var(--bad-soft);color:var(--bad)} .m-avencer{background:var(--bg);color:var(--ink3)}
+.leg{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--ink3);margin-top:10px}
+.leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.spin{display:inline-block;width:22px;height:22px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.bv{background:var(--brand);color:var(--brand-ink);border:0;text-align:center;padding:22px 18px;margin-bottom:14px}
+.bv .em{font-size:40px;line-height:1}
+.bv h2{color:var(--brand-ink);font-size:24px;margin:8px 0 10px}
+.bv blockquote{margin:0;font-family:var(--slab);font-size:18px;line-height:1.45;color:var(--brand-ink)}
+.bv blockquote b{display:block;margin-top:8px;color:var(--accent);font-size:20px;letter-spacing:.4px}
+.bv p{margin:12px 0 0;font-size:14.5px;opacity:.8}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+</style>
+</head>
+<body>
+<header>
+  <img src="mamute.png" alt="">
+  <h1>Página do afiliado</h1>
+  <p>Associação Mastodonte</p>
+</header>
+<main>
+  <nav class="tabs" id="tabs" hidden>
+    <button data-t="sit" class="on">Mensalidades</button><button data-t="trans">Transparência</button><button data-t="ren">Cadastro</button>
+  </nav>
+  <section data-s="sit"><div id="sit"></div></section>
+  <section data-s="trans" hidden><div id="trans"><div class="card" style="text-align:center"><span class="spin"></span></div></div></section>
+  <section data-s="ren" id="secRen"><h2 class="sec" id="tRen" hidden>Cadastro e renovação 2027</h2><div class="card" id="box"><div style="text-align:center;padding:20px"><span class="spin"></span></div></div></section>
+</main>
+
+<script>
+const CFG = { url: 'https://cknzysljezvpazonvibb.supabase.co', key: 'sb_publishable_ji48PdmWNR5nvQkXMhbbCQ_DEekbpVL' };
+const sb = supabase.createClient(CFG.url, CFG.key);
+const box = document.getElementById('box');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const dig = s => String(s ?? '').replace(/\D/g, '');
+const fmtTel = t => { t = dig(t); if (t.length===11) return t.replace(/(\d{2})(\d{5})(\d{4})/,'($1) $2-$3');
+  if (t.length===10) return t.replace(/(\d{2})(\d{4})(\d{4})/,'($1) $2-$3'); return t; };
+const token = new URLSearchParams(location.search).get('t');
+const ANO = 2027;
+const PIX_CHAVE = '55821595000138', PIX_TXT = '55.821.595/0001-38';
+// bloco com a chave PIX e botão de copiar
+const blocoPix = () => `<div class="pix"><div><small>Chave PIX (CNPJ) · Associação Mastodonte</small><b>${PIX_TXT}</b></div>
+  <button type="button" class="cp" onclick="copiarPix(this)">Copiar chave</button></div>`;
+async function copiarPix(btn){
+  try { await navigator.clipboard.writeText(PIX_CHAVE); }
+  catch(e){ const t = document.createElement('textarea'); t.value = PIX_CHAVE; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); }
+  btn.textContent = 'Copiada ✓'; setTimeout(() => btn.textContent = 'Copiar chave', 2500);
+}
+
+const brl = v => (Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const fdata = iso => { const [y,m,d] = String(iso).slice(0,10).split('-'); return `${d}/${m}/${y}`; };
+const MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+// mesma regra do app: 1–2 meses = pendente, 3 ou mais = em atraso
+function situacao(d){
+  const pago = d.pagamentos.reduce((s,p)=>s+Number(p.valor),0), v = Number(d.valor_mensal);
+  if (!(v > 0)) return { k:'ok', txt:'Sem mensalidade fixa', pago };
+  const [y0,m0] = d.inicio.split('-').map(Number), hoje = new Date();
+  const h0 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+  const venc = (y,m) => new Date(y, m-1, Math.min(d.dia_vencimento||20, new Date(y, m, 0).getDate()));
+  let y=y0, m=m0, vencidas=0;
+  while (y < hoje.getFullYear() || (y===hoje.getFullYear() && m <= hoje.getMonth()+1)) { if (venc(y,m) < h0) vencidas++; m++; if (m>12){m=1;y++;} }
+  const cobertos = Math.floor((pago + 0.005) / v);
+  const comp = n => { const t = (m0-1) + n; return `${MESES[t%12]}/${y0 + Math.floor(t/12)}`; };
+  const pagoAte = cobertos > 0 ? comp(cobertos-1) : null;
+  const deve = vencidas*v - pago;
+  if (deve > 0.005){ const meses = Math.ceil(deve/v - 1e-9);
+    return { k: meses>=3 ? 'bad' : 'warn', txt: meses>=3 ? `${meses} meses em atraso` : (meses===1 ? '1 mensalidade pendente' : `${meses} mensalidades pendentes`), deve, pago, pagoAte }; }
+  return { k:'ok', txt:'Mensalidades em dia', pago, pagoAte, prox: comp(cobertos) };
+}
+// mês a mês: os pagamentos quitam primeiro os meses mais antigos
+function listaMeses(d){
+  const v = Number(d.valor_mensal); if (!(v > 0)) return [];
+  const pago = d.pagamentos.reduce((s,p)=>s+Number(p.valor),0), cob = Math.floor((pago + 0.005) / v);
+  const [y0,m0] = d.inicio.split('-').map(Number), hoje = new Date();
+  const h0 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+  const fimN = Math.max((hoje.getFullYear()-y0)*12 + hoje.getMonth()+1 - m0, cob - 1);
+  const out = [];
+  for (let n = 0; n <= fimN; n++){
+    const t = (m0-1)+n, y = y0 + Math.floor(t/12), m = (t%12)+1;
+    const venc = new Date(y, m-1, Math.min(d.dia_vencimento||20, new Date(y, m, 0).getDate()));
+    out.push({ y, m, k: n < cob ? 'pago' : venc < h0 ? 'aberto' : 'avencer' });
+  }
+  return out;
+}
+function gradeMeses(d){
+  const L = listaMeses(d); if (!L.length) return '';
+  const TXT = { pago:'✓ pago', aberto:'em aberto', avencer:'a vencer' };
+  const anos = [...new Set(L.map(x=>x.y))].reverse();
+  return `<h2 class="sec">Mês a mês</h2><div class="card">
+    ${anos.map(y => `<div style="margin-top:${y===anos[0]?0:14}px"><b>${y}</b><div class="meses">
+      ${L.filter(x=>x.y===y).map(x=>`<div class="m-${x.k}">${MESES[x.m-1]}<span>${TXT[x.k]}</span></div>`).join('')}</div></div>`).join('')}
+    <div class="leg"><span><i style="background:var(--ok)"></i>pago</span><span><i style="background:var(--bad)"></i>em aberto</span><span><i style="background:var(--line)"></i>a vencer</span></div></div>`;
+}
+let SIT = null, NOVO = false;
+const primeiroNome = n => String(n||'').trim().split(/\s+/)[0].toLowerCase().replace(/^./, c=>c.toUpperCase());
+// mensagem de boas-vindas para quem entra na associação a partir de 2027
+const boasVindas = nome => `<div class="card bv"><div class="em">🦣</div>
+    <h2>Seja bem-vindo(a) à Associação Mastodonte${nome ? ', ' + esc(nome) : ''}!</h2>
+    <blockquote>De amigos para amigos,<br>de irmãos para irmãos,<br>de Deus para Deus.<b>Gratidão.</b></blockquote>
+    <p>Sua mensalidade começa em janeiro de ${ANO}. Aqui você acompanha seus pagamentos, a prestação de contas e o seu cadastro.</p></div>`;
+function mostrarSituacao(d){
+  const s = situacao(d); SIT = s;
+  NOVO = String(d.inicio||'') >= ANO + '-01-01';
+  document.getElementById('sit').innerHTML = `${NOVO ? boasVindas(primeiroNome(d.nome)) : ''}
+    <div class="card ${s.k}"><div class="st"><div class="dot">${s.k==='ok'?'✓':'!'}</div><div><h2 style="margin:0">${s.txt}</h2>
+      <p class="muted">${s.pagoAte ? 'Pago até '+s.pagoAte : 'Nenhuma mensalidade registrada ainda'}</p></div></div>
+      <dl class="kv"><dt>Mensalidade</dt><dd>${brl(d.valor_mensal)} · vence dia ${d.dia_vencimento}</dd>
+        ${s.deve ? `<dt>Em aberto</dt><dd style="color:var(--bad)">${brl(s.deve)}</dd>` : ''}
+        ${s.prox ? `<dt>Próxima</dt><dd>${s.prox}</dd>` : ''}
+        <dt>Total pago</dt><dd>${brl(s.pago)}</dd>
+        <dt>Categoria</dt><dd>${d.categoria==='fundador'?'Sócio fundador':'Sócio contribuinte'}</dd></dl>
+      ${s.deve ? `<p class="muted" style="margin-top:12px">Para pagar, faça um PIX de <b>${brl(s.deve)}</b> da sua própria conta:</p>${blocoPix()}` : `<p class="muted" style="margin-top:12px">Pague sua mensalidade por PIX, da sua própria conta:</p>${blocoPix()}`}
+      ${s.deve ? `<p class="muted" style="margin-top:12px">Se você já pagou e ainda aparece aqui, pode ser que o pagamento não tenha sido identificado. Fale com a associação.</p>` : ''}
+    </div>
+    ${gradeMeses(d)}
+    <h2 class="sec">Pagamentos</h2>
+    <div class="card">${d.pagamentos.length ? d.pagamentos.slice(0,24).map(p=>`<div class="pg"><span>${fdata(p.data)} · ${esc(p.forma)}</span><b>${brl(p.valor)}</b></div>`).join('')
+      : '<p class="muted">Nenhum pagamento registrado ainda.</p>'}
+      ${d.pagamentos.length>24 ? `<p class="muted" style="margin-top:8px">Mostrando os 24 mais recentes de ${d.pagamentos.length}.</p>` : ''}</div>
+    ${d.estatuto ? `<a class="btn2" href="#" id="lnkEst">📄 Ler o estatuto da associação</a>` : ''}`;
+  const l = document.getElementById('lnkEst');
+  if (l) l.addEventListener('click', async e => { e.preventDefault(); l.textContent = 'Abrindo…';
+    const { data } = await sb.storage.from('documentos').createSignedUrl(d.estatuto, 3600);
+    l.textContent = '📄 Ler o estatuto da associação';
+    if (data?.signedUrl) location.href = data.signedUrl; else alert('Não foi possível abrir o estatuto agora.'); });
+  document.getElementById('tRen').hidden = false;
+  if (NOVO) document.getElementById('tRen').textContent = 'Meu cadastro';
+  document.getElementById('tabs').hidden = false;
+  document.getElementById('secRen').hidden = true;   // cadastro fica na aba própria
+}
+
+/* ---------- abas ---------- */
+let transCarregada = false;
+function aba(t){
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+  document.querySelectorAll('section[data-s]').forEach(s => s.hidden = s.dataset.s !== t);
+  if (t === 'trans' && !transCarregada) carregarTransparencia();
+  window.scrollTo(0, 0);
+}
+document.getElementById('tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (b) aba(b.dataset.t); });
+
+/* ---------- transparência ---------- */
+const MESES_L = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+async function carregarTransparencia(ano){
+  const el = document.getElementById('trans');
+  el.innerHTML = '<div class="card" style="text-align:center"><span class="spin"></span></div>';
+  const { data, error } = await sb.rpc('transparencia', { p_token: token, p_ano: ano || null });
+  if (error || !data){ el.innerHTML = '<div class="card"><p class="muted">Não foi possível carregar agora. Tente de novo mais tarde.</p></div>'; return; }
+  transCarregada = true;
+  const tE = data.meses.reduce((s,m)=>s+Number(m.entradas||0),0), tS = data.meses.reduce((s,m)=>s+Number(m.saidas||0),0);
+  const mxS = Math.max(1, ...data.cat_saidas.map(c=>Number(c.total)));
+  const comComp = data.saidas.filter(x=>x.comprovante).length;
+  const VER = 30;
+  const linhaSaida = x => `<div class="sd"><div class="r"><b>${esc(x.descricao || x.categoria)}</b><b class="neg" style="white-space:nowrap">${brl(x.valor)}</b></div>
+    <div class="d">${fdata(x.data)}${x.descricao?' · '+esc(x.categoria):''}${x.evento?' · '+esc(x.evento):''}${x.comprovante?' · 📎 comprovante arquivado':''}</div></div>`;
+  el.innerHTML = `
+    ${(data.anos||[]).length > 1 ? `<div class="anos">${data.anos.map(a=>`<button class="${a===data.ano?'on':''}" onclick="carregarTransparencia(${a})">${a}</button>`).join('')}</div>` : ''}
+    <p class="muted" style="margin:0 4px 10px">📅 Prestação de contas das movimentações a partir de <b>${fdata(data.inicio)}</b>.</p>
+    <div class="kp">
+      <div class="card"><small>Entradas em ${data.ano}</small><b class="pos">${brl(tE)}</b></div>
+      <div class="card"><small>Saídas em ${data.ano}</small><b class="neg">${brl(tS)}</b></div>
+    </div>
+    <div class="card" style="margin-top:10px"><small class="muted" style="font-weight:700">Resultado do ano (entradas − saídas)</small>
+      <div style="font-family:var(--slab);font-size:24px" class="${tE-tS>=0?'pos':'neg'}">${brl(tE-tS)}</div></div>
+
+    <h2 class="sec">Para onde foi o dinheiro</h2>
+    <div class="card">${data.cat_saidas.length ? data.cat_saidas.map(c=>`<div class="bar"><div class="l"><span>${esc(c.categoria)}</span><b>${brl(c.total)}</b></div>
+      <div class="t"><div class="f" style="width:${(Number(c.total)/mxS*100).toFixed(1)}%"></div></div></div>`).join('') : '<p class="muted">Nenhuma saída neste ano.</p>'}</div>
+
+    <h2 class="sec">De onde veio o dinheiro</h2>
+    <div class="card">${data.cat_entradas.map(c=>`<div class="pg"><span>${esc(c.categoria)}</span><b class="pos">${brl(c.total)}</b></div>`).join('') || '<p class="muted">Nenhuma entrada neste ano.</p>'}</div>
+
+    <h2 class="sec">Mês a mês</h2>
+    <div class="card"><div class="mes"><b>Mês</b><b style="text-align:right">Entradas</b><b style="text-align:right">Saídas</b>
+      ${data.meses.map(m=>`<div>${MESES_L[m.mes-1]}</div><span class="pos">${brl(m.entradas)}</span><span class="neg">${brl(m.saidas)}</span>`).join('')}</div></div>
+
+    ${data.eventos.length ? `<h2 class="sec">Eventos</h2><div class="card">${data.eventos.map(e=>`<div class="sd"><div class="r"><b>${esc(e.nome)}</b><b class="${e.arrecadado-e.gasto>=0?'pos':'neg'}">${brl(e.arrecadado-e.gasto)}</b></div>
+      <div class="d">${e.data?fdata(e.data)+' · ':''}arrecadado ${brl(e.arrecadado)} · gasto ${brl(e.gasto)}</div></div>`).join('')}</div>` : ''}
+
+    <h2 class="sec">Todas as saídas</h2>
+    <p class="muted" style="margin:0 4px 8px">${data.saidas.length} saídas em ${data.ano} · ${comComp} com comprovante arquivado</p>
+    <div class="card" id="listaSaidas">${data.saidas.slice(0,VER).map(linhaSaida).join('') || '<p class="muted">Nenhuma saída registrada a partir dessa data ainda.</p>'}</div>
+    ${data.saidas.length > VER ? `<button id="maisSaidas" style="background:var(--card);color:var(--ink);border:1px solid var(--line)">Ver todas as ${data.saidas.length} saídas</button>` : ''}
+
+    <div class="card" style="margin-top:14px"><p class="muted" style="margin:0">🔒 Para proteger a privacidade, os nomes de quem recebeu os pagamentos não são mostrados. Os comprovantes ficam arquivados e podem ser examinados pelo <b>Conselho Fiscal</b> (Art. 28 do estatuto).</p></div>`;
+  const btn = document.getElementById('maisSaidas');
+  if (btn) btn.onclick = () => { document.getElementById('listaSaidas').innerHTML = data.saidas.map(linhaSaida).join(''); btn.remove(); };
+}
+
+function erro(msg){ box.innerHTML = `<div class="done"><h2>Link inválido</h2><p class="muted">${esc(msg)}</p></div>`; }
+
+async function iniciar(){
+  if (!token || !/^[0-9a-f-]{36}$/i.test(token)) return erro('Este link está incompleto. Peça um novo link para a associação.');
+  const { data, error } = await sb.rpc('renovacao_dados', { p_token: token });
+  if (error) return erro('Não foi possível abrir agora. Verifique sua internet e tente de novo.');
+  if (!data) return erro('Este link não foi encontrado ou o cadastro não está ativo. Fale com a associação.');
+  const sit = await sb.rpc('afiliado_situacao', { p_token: token });
+  if (sit.data) mostrarSituacao({ ...sit.data, nome: data.nome });
+  form(data);
+}
+
+let DADOS = null;
+function form(d, forcar){
+  DADOS = d;
+  if (d.decisao === 'nao_renovar' && !forcar){
+    box.innerHTML = `<div class="done" style="padding:18px 6px"><h2>Você avisou que não vai renovar</h2>
+      <p class="muted" style="margin-top:6px">Você continua associado até <b>31/12/2026</b>. Pague as mensalidades até dezembro normalmente. A partir de janeiro de ${ANO}, o seu cadastro será encerrado.</p>
+      <button id="mudei" style="margin-top:16px">Mudei de ideia, quero renovar</button></div>`;
+    document.getElementById('mudei').onclick = () => form(d, true);
+    return;
+  }
+  box.innerHTML = `
+    <h2>Olá, ${esc(primeiroNome(d.nome))}!</h2>
+    <p class="muted">${NOVO ? 'Confira seus dados, complete o que faltar e salve. Como você está entrando agora, não precisa renovar.' : d.renovado ? 'Você já renovou para 2027. Se quiser, pode corrigir seus dados e enviar de novo.' : 'Confira seus dados, corrija o que for preciso e confirme a renovação.'}</p>
+    ${d.cpf ? `<p class="muted" style="margin-top:10px">CPF: <span class="cpf">${esc(d.cpf)}</span></p>` : ''}
+    <form id="f" novalidate>
+      <label for="nome">Nome completo</label>
+      <input id="nome" name="nome" required autocomplete="name" value="${esc(d.nome)}">
+      <label for="tel">Telefone (WhatsApp)</label>
+      <input id="tel" name="tel" inputmode="tel" autocomplete="tel" placeholder="(17) 99999-9999" value="${esc(fmtTel(d.telefone))}">
+      <label for="email">E-mail</label>
+      <input id="email" name="email" type="email" inputmode="email" autocomplete="email" value="${esc(d.email)}">
+      <label for="nasc">Data de nascimento</label>
+      <input id="nasc" name="nasc" type="date" value="${esc(d.nascimento||'')}">
+      <label for="end">Endereço</label>
+      <input id="end" name="end" autocomplete="street-address" placeholder="Rua, número, bairro, cidade" value="${esc(d.endereco)}">
+      <label for="camisa">Tamanho da camisa</label>
+      <select id="camisa" name="camisa"><option value="">Escolha o tamanho</option>${['PP','P','M','G','GG','XG','XGG','G1','G2','G3'].map(t=>`<option ${t===d.tamanho_camisa?'selected':''}>${t}</option>`).join('')}</select>
+      <div class="card" style="margin-top:16px;padding:12px 14px;background:var(--bg);box-shadow:none">
+        <b>Pagamento por PIX</b>
+        <p class="muted" style="margin-top:4px">A partir de ${ANO}, as mensalidades serão pagas por PIX. Faça o PIX da sua própria conta, com o seu CPF, para o pagamento ser identificado automaticamente.</p>
+        ${blocoPix()}
+      </div>
+      <label for="obs">Observações (opcional)</label>
+      <textarea id="obs" name="obs"></textarea>
+      <label class="check"><input type="checkbox" id="ok" required> ${NOVO ? 'Confirmo que meus dados estão corretos' : 'Quero continuar associado à Mastodonte em 2027'}</label>
+      <div class="err" id="err"></div>
+      <button id="btn" type="submit">${NOVO ? 'Salvar meus dados' : 'Confirmar renovação'}</button>
+    </form>`;
+  document.getElementById('f').addEventListener('submit', enviar);
+  if (NOVO) return;
+  box.insertAdjacentHTML('beforeend', `<div style="border-top:1px solid var(--line);margin-top:22px;padding-top:14px;text-align:center">
+    <button type="button" id="naoRen" style="background:none;color:var(--ink3);font-size:15px;margin:0;padding:8px;text-decoration:underline">Não quero renovar para ${ANO}</button></div>`);
+  document.getElementById('naoRen').onclick = telaNaoRenovar;
+}
+
+function telaNaoRenovar(){
+  const deve = SIT && SIT.deve > 0.005;
+  if (deve){
+    box.innerHTML = `<h2>Antes de sair, é preciso estar em dia</h2>
+      <p class="muted" style="margin-top:6px">Pelo estatuto (Art. 10, IV), o sócio pode pedir para sair desde que esteja quite com a Tesouraria. Hoje há <b style="color:var(--bad)">${brl(SIT.deve)}</b> em aberto.</p>
+      <p class="muted" style="margin-top:10px">Faça o PIX do valor em aberto e, depois que ele for identificado, volte a este link para registrar a sua decisão.</p>
+      ${blocoPix()}
+      <button type="button" id="voltar" style="margin-top:16px;background:var(--bg);color:var(--ink);border:1px solid var(--line)">Voltar</button>`;
+    document.getElementById('voltar').onclick = () => form(DADOS);
+    return;
+  }
+  box.innerHTML = `<h2>Não vai renovar para ${ANO}?</h2>
+    <p class="muted" style="margin-top:6px">Sem problema. Você continua associado até <b>31/12/2026</b>, com todos os direitos, e paga as mensalidades até dezembro. A partir de janeiro de ${ANO}, o seu cadastro é encerrado e não haverá mais cobranças.</p>
+    <label for="mot">Quer contar o motivo? (opcional)</label>
+    <textarea id="mot" maxlength="500" placeholder="Ex.: mudança de cidade"></textarea>
+    <div class="err" id="errN"></div>
+    <button type="button" id="confN" style="background:var(--bad)">Confirmar que não vou renovar</button>
+    <button type="button" id="voltar" style="margin-top:10px;background:var(--bg);color:var(--ink);border:1px solid var(--line)">Voltar e renovar</button>`;
+  document.getElementById('voltar').onclick = () => form(DADOS, true);
+  document.getElementById('confN').onclick = async e => {
+    e.target.disabled = true; e.target.textContent = 'Enviando…';
+    const { error } = await sb.rpc('renovacao_recusar', { p_token: token, p_motivo: document.getElementById('mot').value.trim() || null });
+    if (error){ e.target.disabled = false; e.target.textContent = 'Confirmar que não vou renovar'; return document.getElementById('errN').textContent = 'Não foi possível enviar. Tente de novo.'; }
+    DADOS.decisao = 'nao_renovar';
+    box.innerHTML = `<div class="done"><div class="ic" style="background:var(--bg);color:var(--ink2)">✓</div><h2>Decisão registrada</h2>
+      <p class="muted">Você continua associado até 31/12/2026. Obrigado por ter feito parte da Mastodonte! 🦣<br>Se mudar de ideia até lá, é só abrir este link de novo.</p></div>`;
+  };
+}
+
+async function enviar(ev){
+  ev.preventDefault();
+  const f = new FormData(ev.target), err = document.getElementById('err'), btn = document.getElementById('btn');
+  err.textContent = '';
+  if (!f.get('nome').trim()) return err.textContent = 'Preencha o nome completo.';
+  const tel = dig(f.get('tel'));
+  if (tel && (tel.length < 10 || tel.length > 11)) return err.textContent = 'Confira o telefone: use DDD + número.';
+  if (!f.get('camisa')) return err.textContent = 'Escolha o tamanho da camisa.';
+  if (!document.getElementById('ok').checked) return err.textContent = NOVO ? 'Marque a caixa para confirmar seus dados.' : 'Marque a caixa para confirmar a renovação.';
+  btn.disabled = true; btn.textContent = 'Enviando…';
+  const { error } = await sb.rpc('renovacao_enviar', { p_token: token, p_nome: f.get('nome').trim(), p_telefone: tel,
+    p_email: f.get('email').trim(), p_endereco: f.get('end').trim(), p_nascimento: f.get('nasc') || null,
+    p_forma: 'PIX', p_obs: f.get('obs').trim(), p_camisa: f.get('camisa') || null });
+  if (error){ btn.disabled = false; btn.textContent = NOVO ? 'Salvar meus dados' : 'Confirmar renovação';
+    return err.textContent = 'Não foi possível enviar. Verifique sua internet e tente de novo.'; }
+  box.innerHTML = NOVO ? `<div class="done"><div class="ic">✓</div><h2>Dados salvos!</h2>
+    <p class="muted">Seja muito bem-vindo(a) à Mastodonte. De amigos para amigos, de irmãos para irmãos, de Deus para Deus. Gratidão. 🦣</p></div>`
+    : `<div class="done"><div class="ic">✓</div><h2>Renovação confirmada!</h2>
+    <p class="muted">Obrigado por continuar com a Mastodonte em 2027. 🦣</p></div>`;
+}
+iniciar();
+</script>
+</body>
+</html>
